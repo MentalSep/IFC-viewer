@@ -4,7 +4,6 @@ import Sidebar from "./components/Sidebar";
 
 function App() {
   const [ifcFile, setIfcFile] = useState<File | null>(null);
-  const [sampleUrl, setSampleUrl] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [loadedInfo, setLoadedInfo] = useState<{
     name: string;
@@ -16,17 +15,9 @@ function App() {
   } | null>(null);
 
   const handleFileSelected = useCallback((file: File) => {
-    setSampleUrl(null);
     setIfcFile(file);
     setLoadedInfo({ name: file.name, size: formatSize(file.size) });
     setStatus(`Loading ${file.name}...`);
-  }, []);
-
-  const handleLoadSample = useCallback(() => {
-    setIfcFile(null);
-    setSampleUrl("/test.ifc");
-    setLoadedInfo({ name: "test.ifc", size: "Sample file" });
-    setStatus("Loading sample model...");
   }, []);
 
   const handleLoadComplete = useCallback(() => {
@@ -41,7 +32,6 @@ function App() {
     <div className="app-shell">
       <Sidebar
         onFileSelected={handleFileSelected}
-        onLoadSample={handleLoadSample}
         status={status}
         loadedInfo={loadedInfo}
         onFitCamera={() => viewerRef.current?.fitCamera()}
@@ -51,7 +41,6 @@ function App() {
         <IFCViewer
           ref={viewerRef}
           file={ifcFile}
-          sampleUrl={sampleUrl}
           onLoad={handleLoadComplete}
           onError={handleError}
         />

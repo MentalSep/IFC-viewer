@@ -12,7 +12,6 @@ import * as WebIFC from "web-ifc";
 
 interface IFCViewerProps {
   file: File | null;
-  sampleUrl: string | null;
   onLoad: () => void;
   onError: (err: string) => void;
 }
@@ -23,7 +22,7 @@ export interface IFCViewerRef {
 }
 
 const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
-  ({ file, sampleUrl, onLoad, onError }, ref) => {
+  ({ file, onLoad, onError }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -341,21 +340,6 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       [createMeshFromIFC, onLoad, onError],
     );
 
-    // Load from URL
-    const loadIFCFromURL = useCallback(
-      async (url: string) => {
-        try {
-          const response = await fetch(url);
-          const buffer = await response.arrayBuffer();
-          await loadIFCData(new Uint8Array(buffer));
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          onError(`Failed to fetch IFC: ${message}`);
-        }
-      },
-      [loadIFCData, onError],
-    );
-
     // Load from File
     const loadIFCFromFile = useCallback(
       async (file: File) => {
@@ -431,15 +415,6 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
         });
       }
     }, [file, isReady, loadIFCFromFile, fitCamera]);
-
-    // Load sample when URL changes
-    useEffect(() => {
-      if (sampleUrl && isReady) {
-        loadIFCFromURL(sampleUrl).then(() => {
-          setTimeout(fitCamera, 100);
-        });
-      }
-    }, [sampleUrl, isReady, loadIFCFromURL, fitCamera]);
 
     return (
       <div className="canvas-wrapper" ref={containerRef}>

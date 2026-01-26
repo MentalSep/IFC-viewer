@@ -2,7 +2,6 @@ import { useRef, DragEvent, ChangeEvent, useState, useCallback } from "react";
 
 interface SidebarProps {
   onFileSelected: (file: File) => void;
-  onLoadSample: () => void;
   status: string;
   loadedInfo: { name: string; size: string } | null;
   onFitCamera: () => void;
@@ -11,7 +10,6 @@ interface SidebarProps {
 
 function Sidebar({
   onFileSelected,
-  onLoadSample,
   status,
   loadedInfo,
   onFitCamera,
@@ -75,9 +73,6 @@ function Sidebar({
         </div>
 
         <div className="button-row">
-          <button className="button primary" onClick={onLoadSample}>
-            Load Sample
-          </button>
           <button className="button" onClick={onFitCamera}>
             Fit View
           </button>
