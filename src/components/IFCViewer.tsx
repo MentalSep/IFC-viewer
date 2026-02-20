@@ -9,20 +9,85 @@ import {
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as WebIFC from "web-ifc";
+import type { ElementTypeInfo } from "./ModelTree";
+import type { SelectedElementData, ElementProperty } from "./PropertiesPanel";
 
 interface IFCViewerProps {
   file: File | null;
   onLoad: () => void;
   onError: (err: string) => void;
+  onElementTypesReady: (types: ElementTypeInfo[]) => void;
+  onElementSelected: (data: SelectedElementData | null) => void;
+  theme?: "dark" | "light";
 }
 
 export interface IFCViewerRef {
   fitCamera: () => void;
   resetCamera: () => void;
+  toggleWireframe: () => boolean;
+  toggleGrid: () => boolean;
+  toggleTransparency: () => boolean;
+  screenshot: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  setViewAngle: (direction: string) => void;
+  toggleMeasure: () => boolean;
+  clearMeasurements: () => void;
+  toggleClipping: () => boolean;
+  setClipHeight: (ratio: number) => void;
+}
+
+// Helper: extract properties from an IFC element
+function getElementProperties(
+  ifcApi: WebIFC.IfcAPI,
+  modelID: number,
+  expressID: number,
+): ElementProperty[] {
+  const props: ElementProperty[] = [];
+  try {
+    const line = ifcApi.GetLine(modelID, expressID);
+    if (!line) return props;
+
+    // Extract common properties
+    const entries = Object.entries(line);
+    for (const [key, val] of entries) {
+      if (
+        key === "expressID" ||
+        key === "type" ||
+        val === null ||
+        val === undefined
+      )
+        continue;
+
+      let displayVal: string;
+      if (typeof val === "object" && val !== null && "value" in val) {
+        displayVal = String(val.value);
+      } else if (typeof val === "object" && val !== null) {
+        continue; // skip complex nested objects
+      } else {
+        displayVal = String(val);
+      }
+
+      if (displayVal && displayVal !== "undefined" && displayVal !== "null") {
+        // Make the key more readable
+        const label = key.replace(/([a-z])([A-Z])/g, "$1 $2");
+        props.push({
+          name: label.charAt(0).toUpperCase() + label.slice(1),
+          value: displayVal,
+        });
+      }
+    }
+  } catch {
+    // Property extraction failed — return what we have
+  }
+  return props;
 }
 
 const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
-  ({ file, onLoad, onError }, ref) => {
+  (
+    { file, onLoad, onError, onElementTypesReady, onElementSelected, theme },
+    ref,
+  ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -31,10 +96,36 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
     const ifcApiRef = useRef<WebIFC.IfcAPI | null>(null);
     const modelRef = useRef<THREE.Group | null>(null);
     const animationIdRef = useRef<number | null>(null);
+    const gridRef = useRef<THREE.GridHelper | null>(null);
     const [isReady, setIsReady] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
     const needsRenderRef = useRef(true);
+    const wireframeRef = useRef(false);
+    const transparencyRef = useRef(false);
+    const originalMaterialsRef = useRef<
+      Map<THREE.Mesh, THREE.Material | THREE.Material[]>
+    >(new Map());
+    // Store element type info per expressID for property lookup
+    const elementDataRef = useRef<
+      Map<number, { type: string; expressId: number }>
+    >(new Map());
+    // Store model ID for property queries
+    const currentModelIdRef = useRef<number | null>(null);
+    // Measurement state
+    const measureModeRef = useRef(false);
+    const measurePointsRef = useRef<THREE.Vector3[]>([]);
+    const measureLinesRef = useRef<THREE.Group>(new THREE.Group());
+    const measureLabelsRef = useRef<HTMLDivElement[]>([]);
+    // Clipping plane state
+    const clipPlaneRef = useRef<THREE.Plane>(
+      new THREE.Plane(new THREE.Vector3(0, -1, 0), 100),
+    );
+    const clippingEnabledRef = useRef(false);
+    const modelBoundsRef = useRef<{ minY: number; maxY: number }>({
+      minY: 0,
+      maxY: 100,
+    });
 
     // Initialize the 3D viewer
     const initViewer = useCallback(async () => {
@@ -67,6 +158,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       // Limit pixel ratio for performance on high-DPI displays
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = false; // Disable shadows for performance
+      renderer.localClippingEnabled = true; // Enable clipping planes
       containerRef.current.appendChild(renderer.domElement);
       rendererRef.current = renderer;
 
@@ -99,6 +191,10 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       // Grid
       const gridHelper = new THREE.GridHelper(100, 50, 0x1f2937, 0x1f2937);
       scene.add(gridHelper);
+      gridRef.current = gridHelper;
+
+      // Measurement overlay group
+      scene.add(measureLinesRef.current);
 
       // Initialize web-ifc
       const ifcApi = new WebIFC.IfcAPI();
@@ -152,6 +248,52 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           true,
         );
 
+        // ── Measurement mode ──
+        if (measureModeRef.current && intersects.length > 0) {
+          const point = intersects[0].point.clone();
+          measurePointsRef.current.push(point);
+
+          // Add a small sphere marker
+          const markerGeo = new THREE.SphereGeometry(0.15, 12, 12);
+          const markerMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+          const marker = new THREE.Mesh(markerGeo, markerMat);
+          marker.position.copy(point);
+          measureLinesRef.current.add(marker);
+
+          // If we have a pair, draw the line + distance label
+          if (measurePointsRef.current.length === 2) {
+            const [a, b] = measurePointsRef.current;
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([a, b]);
+            const lineMat = new THREE.LineBasicMaterial({
+              color: 0xfacc15,
+              linewidth: 2,
+            });
+            const line = new THREE.Line(lineGeo, lineMat);
+            measureLinesRef.current.add(line);
+
+            const dist = a.distanceTo(b);
+            // Create a floating HTML label
+            const div = document.createElement("div");
+            div.className = "measure-label";
+            div.textContent = `${dist.toFixed(2)} m`;
+            containerRef.current?.appendChild(div);
+
+            // Position the label at the midpoint (we'll update in the render loop)
+            const mid = a.clone().add(b).multiplyScalar(0.5);
+            const projected = mid.clone().project(camera);
+            const hw = (containerRef.current?.clientWidth ?? 0) / 2;
+            const hh = (containerRef.current?.clientHeight ?? 0) / 2;
+            div.style.left = `${projected.x * hw + hw}px`;
+            div.style.top = `${-projected.y * hh + hh}px`;
+            measureLabelsRef.current.push(div);
+
+            // Reset for next pair
+            measurePointsRef.current = [];
+          }
+          needsRenderRef.current = true;
+          return; // Don't do selection in measure mode
+        }
+
         // Reset previous highlight
         if (highlightedMesh && originalMaterial) {
           highlightedMesh.material = originalMaterial;
@@ -168,9 +310,38 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
             emissive: 0x00d8a4,
             emissiveIntensity: 0.3,
           });
-          setSelectedInfo(`Selected element`);
+
+          // Look up element data from expressID stored on mesh
+          const expressId = (mesh.userData as { expressId?: number }).expressId;
+          const elData = expressId
+            ? elementDataRef.current.get(expressId)
+            : undefined;
+
+          if (
+            elData &&
+            ifcApiRef.current &&
+            currentModelIdRef.current !== null
+          ) {
+            // Try to extract properties
+            const props = getElementProperties(
+              ifcApiRef.current,
+              currentModelIdRef.current,
+              elData.expressId,
+            );
+            setSelectedInfo(`${elData.type} #${elData.expressId}`);
+            onElementSelected({
+              expressId: elData.expressId,
+              type: elData.type,
+              properties: props,
+            });
+          } else {
+            setSelectedInfo("Selected element");
+            onElementSelected(null);
+          }
+          needsRenderRef.current = true;
         } else {
           setSelectedInfo(null);
+          onElementSelected(null);
         }
       };
       containerRef.current.addEventListener("click", handleClick);
@@ -191,12 +362,37 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
     // Convert IFC geometry to Three.js mesh - individual meshes for selection
     const createMeshFromIFC = useCallback(
-      (ifcApi: WebIFC.IfcAPI, modelID: number): THREE.Group => {
+      (
+        ifcApi: WebIFC.IfcAPI,
+        modelID: number,
+      ): { group: THREE.Group; typeCounts: Map<string, number> } => {
         const group = new THREE.Group();
+        const typeCounts = new Map<string, number>();
 
         // Get all meshes from the IFC model
         ifcApi.StreamAllMeshes(modelID, (mesh) => {
+          const expressID = mesh.expressID;
           const placedGeometries = mesh.geometries;
+
+          // Try to determine the IFC type for this element
+          let ifcType = "Unknown";
+          try {
+            const lineData = ifcApi.GetLine(modelID, expressID);
+            if (lineData && lineData.constructor && lineData.constructor.name) {
+              ifcType = lineData.constructor.name;
+            }
+          } catch {
+            // fallback – type stays Unknown
+          }
+
+          // Track element type counts
+          typeCounts.set(ifcType, (typeCounts.get(ifcType) ?? 0) + 1);
+
+          // Store element data for property lookup
+          elementDataRef.current.set(expressID, {
+            type: ifcType,
+            expressId: expressID,
+          });
 
           for (let i = 0; i < placedGeometries.size(); i++) {
             const placedGeometry = placedGeometries.get(i);
@@ -263,6 +459,9 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
             const threeJsMesh = new THREE.Mesh(bufferGeometry, material);
 
+            // Store express ID for property lookup on click
+            threeJsMesh.userData = { expressId: expressID };
+
             // Apply transformation matrix
             const matrix = new THREE.Matrix4();
             matrix.fromArray(placedGeometry.flatTransformation);
@@ -277,7 +476,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           }
         });
 
-        return group;
+        return { group, typeCounts };
       },
       [],
     );
@@ -290,6 +489,8 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
         if (!ifcApi || !scene) return;
 
         setIsLoading(true);
+        elementDataRef.current.clear();
+        originalMaterialsRef.current.clear();
 
         try {
           // Remove existing model and dispose its resources
@@ -308,11 +509,32 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
             modelRef.current = null;
           }
 
+          // Close previous model if open
+          if (currentModelIdRef.current !== null) {
+            try {
+              ifcApi.CloseModel(currentModelIdRef.current);
+            } catch {
+              // ignore
+            }
+            currentModelIdRef.current = null;
+          }
+
           // Load IFC data
           const modelID = ifcApi.OpenModel(data);
+          currentModelIdRef.current = modelID;
 
-          // Create meshes (with geometry merging for performance)
-          const model = createMeshFromIFC(ifcApi, modelID);
+          // Create meshes and collect element types
+          const { group: model, typeCounts } = createMeshFromIFC(
+            ifcApi,
+            modelID,
+          );
+
+          // Report element types to parent
+          const elementTypes: ElementTypeInfo[] = [];
+          typeCounts.forEach((count, type) => {
+            elementTypes.push({ type, count });
+          });
+          onElementTypesReady(elementTypes);
 
           // Center the model at the origin so it appears on the grid
           const box = new THREE.Box3().setFromObject(model);
@@ -323,8 +545,8 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           modelRef.current = model;
           scene.add(model);
 
-          // Close model to free memory (geometry is now in Three.js)
-          ifcApi.CloseModel(modelID);
+          // NOTE: we keep the model open so we can query properties on click
+          // It will be closed when a new model is loaded or on unmount.
 
           // Trigger render
           needsRenderRef.current = true;
@@ -337,7 +559,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           setIsLoading(false);
         }
       },
-      [createMeshFromIFC, onLoad, onError],
+      [createMeshFromIFC, onLoad, onError, onElementTypesReady],
     );
 
     // Load from File
@@ -389,9 +611,246 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       needsRenderRef.current = true;
     }, []);
 
+    // Toggle wireframe on all model meshes
+    const toggleWireframe = useCallback((): boolean => {
+      const model = modelRef.current;
+      if (!model) return wireframeRef.current;
+
+      wireframeRef.current = !wireframeRef.current;
+      const wf = wireframeRef.current;
+
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const mat = child.material;
+          if (mat instanceof THREE.MeshStandardMaterial) {
+            mat.wireframe = wf;
+          }
+        }
+      });
+      needsRenderRef.current = true;
+      return wf;
+    }, []);
+
+    // Toggle grid visibility
+    const toggleGrid = useCallback((): boolean => {
+      const grid = gridRef.current;
+      if (!grid) return true;
+      grid.visible = !grid.visible;
+      needsRenderRef.current = true;
+      return grid.visible;
+    }, []);
+
+    // Toggle transparency (x-ray mode)
+    const toggleTransparency = useCallback((): boolean => {
+      const model = modelRef.current;
+      if (!model) return transparencyRef.current;
+
+      transparencyRef.current = !transparencyRef.current;
+      const xray = transparencyRef.current;
+
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const mat = child.material;
+          if (mat instanceof THREE.MeshStandardMaterial) {
+            if (xray) {
+              // Store original opacity
+              if (!originalMaterialsRef.current.has(child)) {
+                originalMaterialsRef.current.set(child, mat.clone());
+              }
+              mat.transparent = true;
+              mat.opacity = 0.25;
+              mat.depthWrite = false;
+            } else {
+              const orig = originalMaterialsRef.current.get(child);
+              if (orig && orig instanceof THREE.MeshStandardMaterial) {
+                mat.transparent = orig.transparent;
+                mat.opacity = orig.opacity;
+                mat.depthWrite = true;
+              }
+            }
+          }
+        }
+      });
+      needsRenderRef.current = true;
+      return xray;
+    }, []);
+
+    // Take a screenshot
+    const screenshot = useCallback(() => {
+      const renderer = rendererRef.current;
+      const scene = sceneRef.current;
+      const camera = cameraRef.current;
+      if (!renderer || !scene || !camera) return;
+
+      // Force a render to get the current frame
+      renderer.render(scene, camera);
+      const dataUrl = renderer.domElement.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = "ifc-screenshot.png";
+      link.href = dataUrl;
+      link.click();
+    }, []);
+
+    // Zoom in/out
+    const zoomIn = useCallback(() => {
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      if (!camera || !controls) return;
+
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      camera.position.addScaledVector(dir, 5);
+      controls.update();
+      needsRenderRef.current = true;
+    }, []);
+
+    const zoomOut = useCallback(() => {
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      if (!camera || !controls) return;
+
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      camera.position.addScaledVector(dir, -5);
+      controls.update();
+      needsRenderRef.current = true;
+    }, []);
+
+    // Set camera to a preset view angle
+    const setViewAngle = useCallback((direction: string) => {
+      const model = modelRef.current;
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      if (!camera || !controls) return;
+
+      let target = new THREE.Vector3(0, 0, 0);
+      let dist = 40;
+
+      if (model) {
+        const box = new THREE.Box3().setFromObject(model);
+        target = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        dist = Math.max(size.x, size.y, size.z) * 1.6;
+      }
+
+      const pos = target.clone();
+      switch (direction) {
+        case "top":
+          pos.set(target.x, target.y + dist, target.z);
+          break;
+        case "bottom":
+          pos.set(target.x, target.y - dist, target.z);
+          break;
+        case "front":
+          pos.set(target.x, target.y, target.z + dist);
+          break;
+        case "back":
+          pos.set(target.x, target.y, target.z - dist);
+          break;
+        case "right":
+          pos.set(target.x + dist, target.y, target.z);
+          break;
+        case "left":
+          pos.set(target.x - dist, target.y, target.z);
+          break;
+        case "iso":
+        default:
+          pos.set(
+            target.x + dist * 0.6,
+            target.y + dist * 0.6,
+            target.z + dist * 0.6,
+          );
+          break;
+      }
+
+      camera.position.copy(pos);
+      controls.target.copy(target);
+      controls.update();
+      needsRenderRef.current = true;
+    }, []);
+
+    // Toggle measurement mode
+    const toggleMeasure = useCallback((): boolean => {
+      measureModeRef.current = !measureModeRef.current;
+      measurePointsRef.current = [];
+      // Change cursor style
+      if (containerRef.current) {
+        containerRef.current.style.cursor = measureModeRef.current
+          ? "crosshair"
+          : "";
+      }
+      return measureModeRef.current;
+    }, []);
+
+    // Clear all measurement lines and labels
+    const clearMeasurements = useCallback(() => {
+      // Remove 3D objects
+      while (measureLinesRef.current.children.length > 0) {
+        const child = measureLinesRef.current.children[0];
+        measureLinesRef.current.remove(child);
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          (child.material as THREE.Material).dispose();
+        }
+        if (child instanceof THREE.Line) {
+          child.geometry.dispose();
+          (child.material as THREE.Material).dispose();
+        }
+      }
+      // Remove HTML labels
+      measureLabelsRef.current.forEach((el) => el.remove());
+      measureLabelsRef.current = [];
+      measurePointsRef.current = [];
+      needsRenderRef.current = true;
+    }, []);
+
+    // Toggle clipping plane
+    const toggleClipping = useCallback((): boolean => {
+      const model = modelRef.current;
+      clippingEnabledRef.current = !clippingEnabledRef.current;
+      const enabled = clippingEnabledRef.current;
+
+      if (model) {
+        const box = new THREE.Box3().setFromObject(model);
+        modelBoundsRef.current = { minY: box.min.y, maxY: box.max.y };
+
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mat = child.material;
+            if (mat instanceof THREE.MeshStandardMaterial) {
+              mat.clippingPlanes = enabled ? [clipPlaneRef.current] : [];
+              mat.clipShadows = true;
+              mat.needsUpdate = true;
+            }
+          }
+        });
+      }
+      needsRenderRef.current = true;
+      return enabled;
+    }, []);
+
+    // Set clipping height (0 = bottom, 1 = top)
+    const setClipHeight = useCallback((ratio: number) => {
+      const { minY, maxY } = modelBoundsRef.current;
+      const height = minY + (maxY - minY) * ratio;
+      clipPlaneRef.current.constant = height;
+      needsRenderRef.current = true;
+    }, []);
+
     useImperativeHandle(ref, () => ({
       fitCamera,
       resetCamera,
+      toggleWireframe,
+      toggleGrid,
+      toggleTransparency,
+      screenshot,
+      zoomIn,
+      zoomOut,
+      setViewAngle,
+      toggleMeasure,
+      clearMeasurements,
+      toggleClipping,
+      setClipHeight,
     }));
 
     // Initialize viewer on mount
@@ -406,6 +865,25 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
         cleanup?.();
       };
     }, [initViewer]);
+
+    // Update scene background when theme changes
+    useEffect(() => {
+      const scene = sceneRef.current;
+      const grid = gridRef.current;
+      if (!scene) return;
+      if (theme === "light") {
+        scene.background = new THREE.Color(0xe2e8f0);
+        if (grid) {
+          grid.material = new THREE.LineBasicMaterial({ color: 0xc0c8d4 }) as never;
+        }
+      } else {
+        scene.background = new THREE.Color(0x0a0f1a);
+        if (grid) {
+          grid.material = new THREE.LineBasicMaterial({ color: 0x1f2937 }) as never;
+        }
+      }
+      needsRenderRef.current = true;
+    }, [theme]);
 
     // Load file when it changes
     useEffect(() => {

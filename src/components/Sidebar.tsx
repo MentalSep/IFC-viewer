@@ -1,4 +1,10 @@
 import { useRef, DragEvent, ChangeEvent, useState, useCallback } from "react";
+import ModelTree, { type ElementTypeInfo } from "./ModelTree";
+import ModelStats from "./ModelStats";
+import type { ElementComment } from "./ElementComments";
+import ThemeToggle from "./ThemeToggle";
+import SearchFilter from "./SearchFilter";
+import ExportPanel from "./ExportPanel";
 
 interface SidebarProps {
   onFileSelected: (file: File) => void;
@@ -6,6 +12,14 @@ interface SidebarProps {
   loadedInfo: { name: string; size: string } | null;
   onFitCamera: () => void;
   onResetCamera: () => void;
+  elementTypes: ElementTypeInfo[];
+  onElementTypeClick: (type: string) => void;
+  loadTimeMs: number | null;
+  comments: ElementComment[];
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
 }
 
 function Sidebar({
@@ -14,6 +28,14 @@ function Sidebar({
   loadedInfo,
   onFitCamera,
   onResetCamera,
+  elementTypes,
+  onElementTypeClick,
+  loadTimeMs,
+  comments,
+  theme,
+  onToggleTheme,
+  searchQuery,
+  onSearchChange,
 }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -49,10 +71,26 @@ function Sidebar({
     [onFileSelected],
   );
 
+  // Filter element types by search query
+  const filteredElements = searchQuery
+    ? elementTypes.filter((el) =>
+        el.type.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : elementTypes;
+
   return (
     <aside className="panel">
-      <h1>IFC Viewer</h1>
-      <p>Load and explore IFC building models in 3D.</p>
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <span className="sidebar-logo">🏗️</span>
+          <div>
+            <h1>IFC Viewer</h1>
+            <p>Load and explore IFC building models in 3D.</p>
+          </div>
+        </div>
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      </div>
+
       <div className="controls">
         <div
           className={"dropzone" + (dragging ? " dragging" : "")}
@@ -74,10 +112,10 @@ function Sidebar({
 
         <div className="button-row">
           <button className="button" onClick={onFitCamera}>
-            Fit View
+            📐 Fit View
           </button>
           <button className="button" onClick={onResetCamera}>
-            Reset
+            🔄 Reset
           </button>
         </div>
 
@@ -88,6 +126,35 @@ function Sidebar({
         )}
 
         {status && <p className="status">{status}</p>}
+
+        <ModelStats
+          fileName={loadedInfo?.name ?? null}
+          fileSize={loadedInfo?.size ?? null}
+          elementTypes={elementTypes}
+          loadTimeMs={loadTimeMs}
+          commentCount={comments.length}
+          comments={comments}
+        />
+
+        {elementTypes.length > 0 && (
+          <SearchFilter
+            value={searchQuery}
+            onChange={onSearchChange}
+            placeholder="Search element types..."
+          />
+        )}
+
+        <ModelTree
+          elements={filteredElements}
+          onElementTypeClick={onElementTypeClick}
+        />
+
+        <ExportPanel
+          comments={comments}
+          elementTypes={elementTypes}
+          fileName={loadedInfo?.name ?? null}
+          loadTimeMs={loadTimeMs}
+        />
       </div>
     </aside>
   );
