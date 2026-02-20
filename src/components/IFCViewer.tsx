@@ -874,12 +874,16 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       if (theme === "light") {
         scene.background = new THREE.Color(0xe2e8f0);
         if (grid) {
-          grid.material = new THREE.LineBasicMaterial({ color: 0xc0c8d4 }) as never;
+          grid.material = new THREE.LineBasicMaterial({
+            color: 0xc0c8d4,
+          }) as never;
         }
       } else {
         scene.background = new THREE.Color(0x0a0f1a);
         if (grid) {
-          grid.material = new THREE.LineBasicMaterial({ color: 0x1f2937 }) as never;
+          grid.material = new THREE.LineBasicMaterial({
+            color: 0x1f2937,
+          }) as never;
         }
       }
       needsRenderRef.current = true;

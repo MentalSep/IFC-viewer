@@ -56,8 +56,8 @@ function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
           ))}
         </div>
         <p className="shortcuts-hint">
-          Press <kbd>?</kbd> to toggle this panel &nbsp;|&nbsp;{" "}
-          <kbd>Esc</kbd> to close
+          Press <kbd>?</kbd> to toggle this panel &nbsp;|&nbsp; <kbd>Esc</kbd>{" "}
+          to close
         </p>
       </div>
     </div>

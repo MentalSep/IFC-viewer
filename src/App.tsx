@@ -208,13 +208,10 @@ function App() {
     [],
   );
 
-  const handleClipHeightChange = useCallback(
-    (ratio: number) => {
-      setClipHeight(ratio);
-      viewerRef.current?.setClipHeight(ratio);
-    },
-    [],
-  );
+  const handleClipHeightChange = useCallback((ratio: number) => {
+    setClipHeight(ratio);
+    viewerRef.current?.setClipHeight(ratio);
+  }, []);
 
   // ── Render ──
 
@@ -282,9 +279,7 @@ function App() {
           onClipHeightChange={handleClipHeightChange}
           onShowShortcuts={() => setShortcutsOpen(true)}
         />
-        <ViewCube
-          onSetView={(dir) => viewerRef.current?.setViewAngle(dir)}
-        />
+        <ViewCube onSetView={(dir) => viewerRef.current?.setViewAngle(dir)} />
         <PropertiesPanel
           data={selectedElement}
           onClose={() => setSelectedElement(null)}
