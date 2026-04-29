@@ -3,3 +3,5 @@ dist
 .vite
 .DS_Store
 .idea
+PHASE*
+ARCHITECTURE_EVOLUTION.md
