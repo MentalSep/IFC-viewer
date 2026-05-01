@@ -1,13 +1,13 @@
 import React, { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
 import "../styles/pages/auth.css";
 
 export function Register() {
   const navigate = useNavigate();
   const { register, loading, error } = useAuthStore();
-  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
@@ -18,6 +18,11 @@ export function Register() {
 
     if (password !== confirmPassword) {
       setLocalError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setLocalError("Password must be at least 6 characters long");
       return;
     }
 
@@ -32,24 +37,31 @@ export function Register() {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        <h1>CoBIM Cloud</h1>
-        <p className="subtitle">Create your account</p>
+        <div style={{ marginBottom: "1rem" }}>
+          <h1>🏗️ CoBIM Cloud</h1>
+          <p className="subtitle">Start collaborating on BIM projects</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label>Name</label>
+            <label htmlFor="name">Full Name</label>
             <input
+              id="name"
               type="text"
+              placeholder="John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              autoFocus
             />
           </div>
 
           <div className="form-group">
-            <label>Email</label>
+            <label htmlFor="email">Email Address</label>
             <input
+              id="email"
               type="email"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -57,9 +69,11 @@ export function Register() {
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="password">Password</label>
             <input
+              id="password"
               type="password"
+              placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -67,9 +81,11 @@ export function Register() {
           </div>
 
           <div className="form-group">
-            <label>Confirm Password</label>
+            <label htmlFor="confirmPassword">Confirm Password</label>
             <input
+              id="confirmPassword"
               type="password"
+              placeholder="Repeat your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -77,16 +93,18 @@ export function Register() {
           </div>
 
           {(error || localError) && (
-            <div className="error-message">{error || localError}</div>
+            <div className="error-message">
+              <strong>⚠️ Error:</strong> {error || localError}
+            </div>
           )}
 
           <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? "Creating account..." : "Register"}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
         <p className="auth-link">
-          Already have an account? <a href="/login">Login here</a>
+          Already have an account? <Link to="/login">Sign in here</Link>
         </p>
       </div>
     </div>

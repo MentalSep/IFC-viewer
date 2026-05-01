@@ -1,13 +1,10 @@
 import type { ElementTypeInfo } from "./ModelTree";
-import type { ElementComment } from "./ElementComments";
 
 interface ModelStatsProps {
   fileName: string | null;
   fileSize: string | null;
   elementTypes: ElementTypeInfo[];
   loadTimeMs: number | null;
-  commentCount: number;
-  comments: ElementComment[];
 }
 
 function ModelStats({
@@ -15,18 +12,11 @@ function ModelStats({
   fileSize,
   elementTypes,
   loadTimeMs,
-  commentCount,
-  comments,
 }: ModelStatsProps) {
   if (!fileName) return null;
 
   const totalElements = elementTypes.reduce((sum, el) => sum + el.count, 0);
   const uniqueTypes = elementTypes.length;
-
-  const criticalCount = comments.filter(
-    (c) => c.priority === "critical",
-  ).length;
-  const warningCount = comments.filter((c) => c.priority === "warning").length;
 
   return (
     <div className="model-stats">
@@ -51,19 +41,6 @@ function ModelStats({
           <span className="model-stat-label">Load Time</span>
         </div>
       </div>
-      {commentCount > 0 && (
-        <div className="model-stats-comments">
-          <span>
-            💬 {commentCount} comment{commentCount !== 1 ? "s" : ""}
-          </span>
-          {criticalCount > 0 && (
-            <span className="model-stats-critical">🚨 {criticalCount}</span>
-          )}
-          {warningCount > 0 && (
-            <span className="model-stats-warning">⚠️ {warningCount}</span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

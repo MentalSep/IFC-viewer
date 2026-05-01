@@ -202,16 +202,13 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       await ifcApi.Init();
       ifcApiRef.current = ifcApi;
 
-      // Animation loop with on-demand rendering for better performance
+      // Animation loop - render continuously for smooth damping interaction
       const animate = () => {
         animationIdRef.current = requestAnimationFrame(animate);
         controls.update();
 
-        // Only render when needed (camera moved or model changed)
-        if (needsRenderRef.current) {
-          renderer.render(scene, camera);
-          needsRenderRef.current = false;
-        }
+        // Always render to show damped camera movement smoothly
+        renderer.render(scene, camera);
       };
       animate();
 
@@ -889,14 +886,45 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       needsRenderRef.current = true;
     }, [theme]);
 
-    // Load file when it changes
+    // Load file when it changes - with minimal stable dependencies
     useEffect(() => {
-      if (file && isReady) {
-        loadIFCFromFile(file).then(() => {
-          setTimeout(fitCamera, 100);
-        });
-      }
-    }, [file, isReady, loadIFCFromFile, fitCamera]);
+      if (!file || !isReady || !ifcApiRef.current || !sceneRef.current) return;
+
+      const loadFile = async () => {
+        try {
+          const buffer = await file.arrayBuffer();
+          await loadIFCData(new Uint8Array(buffer));
+
+          // Fit camera after load
+          setTimeout(() => {
+            const model = modelRef.current;
+            const camera = cameraRef.current;
+            const controls = controlsRef.current;
+            if (!model || !camera || !controls) return;
+
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const distance = maxDim * 1.5;
+
+            camera.position.set(
+              center.x + distance,
+              center.y + distance * 0.7,
+              center.z + distance,
+            );
+            controls.target.copy(center);
+            controls.update();
+            needsRenderRef.current = true;
+          }, 100);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          onError(`Failed to load IFC: ${message}`);
+        }
+      };
+
+      loadFile();
+    }, [file, isReady, loadIFCData, onError]);
 
     return (
       <div className="canvas-wrapper" ref={containerRef}>

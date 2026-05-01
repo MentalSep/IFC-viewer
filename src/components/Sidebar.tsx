@@ -1,10 +1,8 @@
 import { useRef, DragEvent, ChangeEvent, useState, useCallback } from "react";
 import ModelTree, { type ElementTypeInfo } from "./ModelTree";
 import ModelStats from "./ModelStats";
-import type { ElementComment } from "./ElementComments";
 import ThemeToggle from "./ThemeToggle";
 import SearchFilter from "./SearchFilter";
-import ExportPanel from "./ExportPanel";
 
 interface SidebarProps {
   onFileSelected: (file: File) => void;
@@ -15,7 +13,6 @@ interface SidebarProps {
   elementTypes: ElementTypeInfo[];
   onElementTypeClick: (type: string) => void;
   loadTimeMs: number | null;
-  comments: ElementComment[];
   theme: "dark" | "light";
   onToggleTheme: () => void;
   searchQuery: string;
@@ -31,7 +28,6 @@ function Sidebar({
   elementTypes,
   onElementTypeClick,
   loadTimeMs,
-  comments,
   theme,
   onToggleTheme,
   searchQuery,
@@ -132,8 +128,6 @@ function Sidebar({
           fileSize={loadedInfo?.size ?? null}
           elementTypes={elementTypes}
           loadTimeMs={loadTimeMs}
-          commentCount={comments.length}
-          comments={comments}
         />
 
         {elementTypes.length > 0 && (
@@ -147,13 +141,6 @@ function Sidebar({
         <ModelTree
           elements={filteredElements}
           onElementTypeClick={onElementTypeClick}
-        />
-
-        <ExportPanel
-          comments={comments}
-          elementTypes={elementTypes}
-          fileName={loadedInfo?.name ?? null}
-          loadTimeMs={loadTimeMs}
         />
       </div>
     </aside>
