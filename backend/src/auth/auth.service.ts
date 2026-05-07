@@ -3,7 +3,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
-import { User } from "../users/user.entity";
+import { User, UserRole } from "../users/user.entity";  // 👈 importe UserRole
+
+export const VALID_ROLES = Object.values(UserRole);  // 👈 dérivé de l'enum
 
 @Injectable()
 export class AuthService {
@@ -13,8 +15,12 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async register(email: string, name: string, password: string) {
-    // Check if user exists
+  async register(
+    email: string,
+    name: string,
+    password: string,
+    role: string = "member",
+  ) {
     const existingUser = await this.usersRepository.findOne({
       where: { email },
     });
@@ -22,24 +28,27 @@ export class AuthService {
       throw new Error("User already exists");
     }
 
-    // Hash password
+    // Valide et cast vers UserRole
+    const validatedRole: UserRole = VALID_ROLES.includes(role as UserRole)
+      ? (role as UserRole)
+      : UserRole.MEMBER;  // 👈
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Create user
     const user = this.usersRepository.create({
       email,
       name,
       passwordHash,
-      role: "member",
+      role: validatedRole,  // 👈 maintenant typé correctement
     });
 
     await this.usersRepository.save(user);
 
-    // Generate token
     const access_token = this.jwtService.sign({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     return {
@@ -54,22 +63,20 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    // Find user
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
       throw new Error("Invalid credentials");
     }
 
-    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new Error("Invalid credentials");
     }
 
-    // Generate token
     const access_token = this.jwtService.sign({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
 
     return {

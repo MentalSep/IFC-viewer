@@ -13,13 +13,20 @@ export class AuthController {
 
   @Post("register")
   async register(
-    @Body() body: { email: string; name: string; password: string },
+    @Body()
+    body: {
+      email: string;
+      name: string;
+      password: string;
+      role?: string; // ← optionnel, défaut = "member"
+    },
   ) {
     try {
       return await this.authService.register(
         body.email,
         body.name,
         body.password,
+        body.role, // ← passe le rôle
       );
     } catch (error) {
       const message =

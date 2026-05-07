@@ -9,6 +9,11 @@ import {
 import { Project } from "../projects/project.entity";
 import { ProjectMember } from "../projects/project-member.entity";
 
+export enum UserRole {
+  ADMIN = 'admin',
+  MEMBER = 'member',
+}
+
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
@@ -23,8 +28,12 @@ export class User {
   @Column()
   passwordHash: string;
 
-  @Column({ default: "member" })
-  role: "admin" | "member";
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.MEMBER,
+  })
+  role: UserRole;
 
   @CreateDateColumn()
   createdAt: Date;

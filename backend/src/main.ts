@@ -1,6 +1,3 @@
-// Load environment variables FIRST using require to ensure synchronous loading
-require("dotenv").config();
-
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
@@ -9,7 +6,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: true,
     credentials: true,
   });
 
@@ -19,9 +16,6 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port, () => {
     console.log(`✅ CoBIM API running on http://localhost:${port}`);
-    console.log(
-      `📡 CORS enabled for: ${process.env.CORS_ORIGIN || "http://localhost:5173"}`,
-    );
   });
 }
 

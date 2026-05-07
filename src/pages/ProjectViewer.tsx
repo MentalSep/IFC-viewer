@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjectsStore } from "../services/state/useProjectsStore";
 import { useDocumentsStore } from "../services/state/useDocumentsStore";
 import { useAuthStore } from "../services/state/useAuthStore";
-import IFCViewer from "../components/IFCViewer";
+import IFCViewer, { IFCViewerRef } from "../components/IFCViewer";
+import ViewCube from "../components/ViewCube";
 import DocumentBrowser from "../components/DocumentBrowser";
 import "../styles/pages/project-viewer.css";
 
@@ -14,6 +15,7 @@ export function ProjectViewer() {
   const { selectedDocument, fetch: fetchDocuments } = useDocumentsStore();
   const { user } = useAuthStore();
   const [activeFile, setActiveFile] = useState<File | null>(null);
+  const viewerRef = useRef<IFCViewerRef>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -26,13 +28,14 @@ export function ProjectViewer() {
     setActiveFile(file);
   };
 
+  const handleSetView = useCallback((direction: string) => {
+    viewerRef.current?.setViewAngle(direction);
+  }, []);
+
   return (
     <div className="project-viewer">
       <div className="viewer-header">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="btn btn-secondary"
-        >
+        <button onClick={() => navigate("/dashboard")} className="btn btn-secondary">
           ← Dashboard
         </button>
         <h1>{currentProject?.name || "Loading..."}</h1>
@@ -47,11 +50,17 @@ export function ProjectViewer() {
           />
         </aside>
 
-        <main className="viewer-main">
+        <main className="viewer-main" style={{ position: "relative" }}>
+          <ViewCube onSetView={handleSetView} />
           {activeFile ? (
-            <IFCViewer file={activeFile} />
-          ) : selectedDocument ? (
-            <IFCViewer file={null} />
+            <IFCViewer
+              ref={viewerRef}
+              file={activeFile}
+              onLoad={() => console.log("Model loaded")}
+              onError={(err) => console.error(err)}
+              onElementTypesReady={(types) => console.log(types)}
+              onElementSelected={(data) => console.log(data)}
+            />
           ) : (
             <div className="empty-viewer">
               <p>Select a document from the sidebar to view</p>

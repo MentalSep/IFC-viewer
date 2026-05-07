@@ -5,13 +5,14 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
 import { ProjectViewer } from "./pages/ProjectViewer";
+import { Teams } from "./pages/Teams";
 import "./styles/global.css";
 
 function App() {
   const { user, hydrate } = useAuthStore();
 
   useEffect(() => {
-    hydrate(); // Check if user is logged in
+    hydrate();
   }, []);
 
   return (
@@ -24,6 +25,7 @@ function App() {
           <>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/:projectId" element={<ProjectViewer />} />
+            <Route path="/teams" element={<Teams />} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
           </>
         ) : (
