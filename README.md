@@ -29,6 +29,19 @@ npm run dev
 
 Open your browser at [http://localhost:5173](http://localhost:5173)
 
+### Firebase Setup (Frontend-only)
+
+Create a `.env` file in the project root:
+
+```bash
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+```
+
 ### Build for Production
 
 ```bash

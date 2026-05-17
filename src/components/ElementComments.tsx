@@ -36,7 +36,7 @@ export const ROLE_META: Record<
 };
 
 export interface ElementComment {
-  id: number;
+  id: string;
   expressId: number;
   elementType: string;
   author: string;
@@ -46,13 +46,15 @@ export interface ElementComment {
   priority: "info" | "warning" | "critical";
 }
 
+export type ElementCommentDraft = Omit<ElementComment, "id" | "timestamp">;
+
 interface ElementCommentsProps {
   /** Currently selected element expressId, or null */
   selectedExpressId: number | null;
   selectedElementType: string | null;
   /** All comments across all elements */
   comments: ElementComment[];
-  onAddComment: (comment: ElementComment) => void;
+  onAddComment: (comment: ElementCommentDraft) => void;
   userName: string;
   userRole: ProfessionalRole;
 }
@@ -87,10 +89,6 @@ function ElementComments({
   );
   const [filterMode, setFilterMode] = useState<"element" | "all">("element");
   const listEndRef = useRef<HTMLDivElement>(null);
-  const nextIdRef = useRef(
-    comments.length > 0 ? Math.max(...comments.map((c) => c.id)) + 1 : 1,
-  );
-
   const filtered =
     filterMode === "element" && selectedExpressId !== null
       ? comments.filter((c) => c.expressId === selectedExpressId)
@@ -108,13 +106,11 @@ function ElementComments({
       if (!trimmed || selectedExpressId === null) return;
 
       onAddComment({
-        id: nextIdRef.current++,
         expressId: selectedExpressId,
         elementType: selectedElementType ?? "Unknown",
         author: userName,
         role: userRole,
         text: trimmed,
-        timestamp: new Date(),
         priority,
       });
       setText("");

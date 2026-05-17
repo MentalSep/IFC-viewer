@@ -8,8 +8,8 @@ import {
 } from "react";
 import { ROLES, ROLE_META, type ProfessionalRole } from "./ElementComments";
 
-interface Message {
-  id: number;
+export interface ChatMessage {
+  id: string;
   author: string;
   role: ProfessionalRole;
   text: string;
@@ -20,29 +20,51 @@ interface ChatProps {
   fileName: string | null;
   /** Called once the user sets their name + role */
   onUserReady?: (name: string, role: ProfessionalRole) => void;
+  messages?: ChatMessage[];
+  onSendMessage?: (
+    text: string,
+    author: string,
+    role: ProfessionalRole,
+  ) => Promise<void> | void;
+  initialUserName?: string;
+  initialRole?: ProfessionalRole;
 }
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function Chat({ fileName, onUserReady }: ChatProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+function Chat({
+  fileName,
+  onUserReady,
+  messages: externalMessages,
+  onSendMessage,
+  initialUserName,
+  initialRole = "Architect",
+}: ChatProps) {
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [username, setUsername] = useState("");
-  const [role, setRole] = useState<ProfessionalRole>("Architect");
-  const [joined, setJoined] = useState(false);
+  const [username, setUsername] = useState(initialUserName ?? "");
+  const [role, setRole] = useState<ProfessionalRole>(initialRole);
+  const [joined, setJoined] = useState(Boolean(initialUserName));
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const nextIdRef = useRef(1);
+  const activeMessages = externalMessages ?? localMessages;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [activeMessages]);
 
   useEffect(() => {
     if (joined) inputRef.current?.focus();
   }, [joined]);
+
+  useEffect(() => {
+    if (initialUserName) {
+      setUsername(initialUserName);
+      setJoined(true);
+    }
+  }, [initialUserName]);
 
   const handleJoin = useCallback(
     (e: FormEvent) => {
@@ -61,19 +83,23 @@ function Chat({ fileName, onUserReady }: ChatProps) {
       e.preventDefault();
       const text = input.trim();
       if (!text || !joined) return;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextIdRef.current++,
-          author: username,
-          role,
-          text,
-          timestamp: new Date(),
-        },
-      ]);
+      if (onSendMessage) {
+        void onSendMessage(text, username, role);
+      } else {
+        setLocalMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now()),
+            author: username,
+            role,
+            text,
+            timestamp: new Date(),
+          },
+        ]);
+      }
       setInput("");
     },
-    [input, username, role, joined],
+    [input, username, role, joined, onSendMessage],
   );
 
   const handleKeyDown = useCallback(
@@ -168,12 +194,12 @@ function Chat({ fileName, onUserReady }: ChatProps) {
       </div>
 
       <div className="chat-messages">
-        {messages.length === 0 && (
+        {activeMessages.length === 0 && (
           <p className="chat-placeholder">
             No messages yet. Discuss <strong>{fileName}</strong> with your team!
           </p>
         )}
-        {messages.map((msg) => {
+        {activeMessages.map((msg) => {
           const meta = ROLE_META[msg.role];
           return (
             <div key={msg.id} className="chat-message">

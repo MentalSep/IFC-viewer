@@ -40,9 +40,13 @@ export default function DocumentBrowser({
     }
   };
 
-  const handleDownload = (docId: string) => {
-    const url = documentsApi.download(projectId, docId);
-    window.open(url, "_blank");
+  const handleDownload = async (docId: string) => {
+    try {
+      const url = await documentsApi.download(projectId, docId);
+      window.open(url, "_blank");
+    } catch (error) {
+      alert("Download failed");
+    }
   };
 
   return (

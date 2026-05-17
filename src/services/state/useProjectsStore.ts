@@ -9,6 +9,7 @@ interface Project {
   ownerId: string;
   status: string;
   createdAt: string;
+  documentsCount?: number;
   documents: any[];
 }
 

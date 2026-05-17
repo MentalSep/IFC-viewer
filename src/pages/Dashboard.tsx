@@ -140,44 +140,48 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="projects-grid">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="project-card"
-                onClick={() => handleOpenProject(project.id)}
-              >
-                <div className="project-header">
-                  <h3>{project.name}</h3>
-                  <span className="project-status">{project.status}</span>
-                </div>
-
-                <p className="project-description">
-                  {project.description || "No description"}
-                </p>
-
-                <div className="project-meta">
-                  <div className="meta-item">
-                    <span className="meta-icon">📄</span>
-                    <span>
-                      {project.documents?.length || 0} document
-                      {(project.documents?.length || 0) !== 1 ? "s" : ""}
-                    </span>
+            {projects.map((project) => {
+              const documentCount =
+                project.documentsCount ?? project.documents?.length ?? 0;
+              return (
+                <div
+                  key={project.id}
+                  className="project-card"
+                  onClick={() => handleOpenProject(project.id)}
+                >
+                  <div className="project-header">
+                    <h3>{project.name}</h3>
+                    <span className="project-status">{project.status}</span>
                   </div>
-                  <div className="meta-item">
-                    <span className="meta-icon">📅</span>
-                    <span>
-                      {new Date(project.createdAt).toLocaleDateString()}
-                    </span>
+
+                  <p className="project-description">
+                    {project.description || "No description"}
+                  </p>
+
+                  <div className="project-meta">
+                    <div className="meta-item">
+                      <span className="meta-icon">📄</span>
+                      <span>
+                        {documentCount} document
+                        {documentCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="meta-icon">📅</span>
+                      <span>
+                        {new Date(project.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="project-action">
+                    <button className="btn btn-sm btn-accent">
+                      Open Project →
+                    </button>
                   </div>
                 </div>
-
-                <div className="project-action">
-                  <button className="btn btn-sm btn-accent">
-                    Open Project →
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

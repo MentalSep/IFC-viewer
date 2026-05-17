@@ -6,8 +6,24 @@ import Sidebar from "../components/Sidebar";
 import Toolbar from "../components/Toolbar";
 import PropertiesPanel from "../components/PropertiesPanel";
 import Chat from "../components/Chat";
+import type { ChatMessage } from "../components/Chat";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import ViewCube from "../components/ViewCube";
+import ElementComments, {
+  type ElementComment,
+  type ElementCommentDraft,
+  type ProfessionalRole,
+} from "../components/ElementComments";
+import {
+  addDoc,
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
+import { firebaseDb } from "../services/firebase/client";
 
 import type { ElementTypeInfo } from "../components/ModelTree";
 import type { SelectedElementData } from "../components/PropertiesPanel";
@@ -35,6 +51,12 @@ export function ProjectViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [rightPanelTab, setRightPanelTab] = useState<"properties" | "comments">(
+    "properties",
+  );
+  const [comments, setComments] = useState<ElementComment[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [userRole, setUserRole] = useState<ProfessionalRole>("Architect");
 
   // Blank canvas - user uploads file
 
@@ -131,6 +153,102 @@ export function ProjectViewer() {
     // Filter or highlight elements of this type
   }, []);
 
+  // Ensure viewer resizes when sidebars open/close
+  useEffect(() => {
+    // Wait for layout to settle, then trigger multiple RAF frames to catch resize
+    const timerId = setTimeout(() => {
+      const raf1 = requestAnimationFrame(() => {
+        const raf2 = requestAnimationFrame(() => {
+          ifcViewerRef.current?.resize();
+        });
+      });
+    }, 150);
+    return () => clearTimeout(timerId);
+  }, [showLeftSidebar, showRightSidebar]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const messagesQuery = query(
+      collection(firebaseDb, "projects", projectId, "chatMessages"),
+      orderBy("timestamp", "asc"),
+    );
+    const commentsQuery = query(
+      collection(firebaseDb, "projects", projectId, "comments"),
+      orderBy("timestamp", "asc"),
+    );
+
+    const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+      const nextMessages: ChatMessage[] = snapshot.docs.map((item) => {
+        const data = item.data();
+        const timestamp = data.timestamp;
+        const date =
+          timestamp instanceof Timestamp
+            ? timestamp.toDate()
+            : new Date(Date.now());
+        return {
+          id: item.id,
+          author: data.author ?? "Unknown",
+          role: (data.role ?? "Architect") as ProfessionalRole,
+          text: data.text ?? "",
+          timestamp: date,
+        };
+      });
+      setChatMessages(nextMessages);
+    });
+
+    const unsubComments = onSnapshot(commentsQuery, (snapshot) => {
+      const nextComments: ElementComment[] = snapshot.docs.map((item) => {
+        const data = item.data();
+        const timestamp = data.timestamp;
+        const date =
+          timestamp instanceof Timestamp
+            ? timestamp.toDate()
+            : new Date(Date.now());
+        return {
+          id: item.id,
+          expressId: data.expressId ?? 0,
+          elementType: data.elementType ?? "Unknown",
+          author: data.author ?? "Unknown",
+          role: (data.role ?? "Architect") as ProfessionalRole,
+          text: data.text ?? "",
+          timestamp: date,
+          priority: data.priority ?? "info",
+        };
+      });
+      setComments(nextComments);
+    });
+
+    return () => {
+      unsubMessages();
+      unsubComments();
+    };
+  }, [projectId]);
+
+  const handleSendChatMessage = useCallback(
+    async (text: string, author: string, role: ProfessionalRole) => {
+      if (!projectId) return;
+      await addDoc(collection(firebaseDb, "projects", projectId, "chatMessages"), {
+        text,
+        author,
+        role,
+        timestamp: serverTimestamp(),
+      });
+    },
+    [projectId],
+  );
+
+  const handleAddComment = useCallback(
+    async (comment: ElementCommentDraft) => {
+      if (!projectId) return;
+      await addDoc(collection(firebaseDb, "projects", projectId, "comments"), {
+        ...comment,
+        timestamp: serverTimestamp(),
+      });
+    },
+    [projectId],
+  );
+
   return (
     <div className="app-container" data-theme={theme}>
       {/* Header */}
@@ -195,6 +313,8 @@ export function ProjectViewer() {
           display: "flex",
           height: "calc(100vh - 50px)",
           marginTop: "50px",
+          width: "100%",
+          overflow: "hidden",
         }}
       >
         {/* Left Sidebar */}
@@ -227,9 +347,9 @@ export function ProjectViewer() {
                   padding: "4px 8px",
                   fontSize: "14px",
                 }}
-                title="Close sidebar"
+                title="Collapse sidebar"
               >
-                ✕
+                ‹
               </button>
             </div>
             <Sidebar
@@ -368,9 +488,26 @@ export function ProjectViewer() {
                     padding: "8px",
                     borderBottom: "1px solid var(--border)",
                     display: "flex",
-                    justifyContent: "flex-end",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      className={`tab-btn ${rightPanelTab === "properties" ? "active" : ""}`}
+                      onClick={() => setRightPanelTab("properties")}
+                      title="Properties"
+                    >
+                      Properties
+                    </button>
+                    <button
+                      className={`tab-btn ${rightPanelTab === "comments" ? "active" : ""}`}
+                      onClick={() => setRightPanelTab("comments")}
+                      title="Comments"
+                    >
+                      Comments
+                    </button>
+                  </div>
                   <button
                     onClick={() => setShowRightSidebar(false)}
                     style={{
@@ -381,27 +518,41 @@ export function ProjectViewer() {
                       padding: "4px 8px",
                       fontSize: "14px",
                     }}
-                    title="Close panel"
+                    title="Collapse panel"
                   >
-                    ✕
+                    ›
                   </button>
                 </div>
-                {selectedElement ? (
-                  <PropertiesPanel
-                    data={selectedElement}
-                    onClose={() => setSelectedElement(null)}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      padding: "16px",
-                      color: "var(--muted)",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Select an element to view properties
-                  </div>
-                )}
+
+                <div style={{ flex: 1, overflow: "auto" }}>
+                  {rightPanelTab === "properties" ? (
+                    selectedElement ? (
+                      <PropertiesPanel
+                        data={selectedElement}
+                        onClose={() => setSelectedElement(null)}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          padding: "16px",
+                          color: "var(--muted)",
+                          fontSize: "13px",
+                        }}
+                      >
+                        Select an element to view properties
+                      </div>
+                    )
+                  ) : (
+                    <ElementComments
+                      selectedExpressId={selectedElement?.expressId ?? null}
+                      selectedElementType={selectedElement?.type ?? null}
+                      comments={comments}
+                      onAddComment={handleAddComment}
+                      userName={user?.name ?? "Guest"}
+                      userRole={userRole}
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -409,7 +560,14 @@ export function ProjectViewer() {
       </div>
 
       {/* Chat */}
-      <Chat fileName={loadedInfo?.name ?? null} />
+      <Chat
+        fileName={loadedInfo?.name ?? null}
+        messages={chatMessages}
+        onSendMessage={handleSendChatMessage}
+        initialUserName={user?.name}
+        initialRole={userRole}
+        onUserReady={(_, role) => setUserRole(role)}
+      />
 
       {/* Keyboard Shortcuts */}
       <KeyboardShortcuts

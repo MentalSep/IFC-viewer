@@ -35,6 +35,7 @@ export interface IFCViewerRef {
   clearMeasurements: () => void;
   toggleClipping: () => boolean;
   setClipHeight: (ratio: number) => void;
+  resize: () => void;
 }
 
 // Helper: extract properties from an IFC element
@@ -92,6 +93,32 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
     const sceneRef = useRef<THREE.Scene | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+    const needsRenderRef = useRef(true);
+    const resizeRenderer = useCallback(() => {
+      const container = containerRef.current;
+      const camera = cameraRef.current;
+      const renderer = rendererRef.current;
+      if (!container || !camera || !renderer) return;
+
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+
+      // Update camera aspect ratio
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+
+      // Update renderer size (this sets internal resolution)
+      renderer.setSize(w, h, false); // false = don't set CSS size, let CSS handle it
+
+      // Also ensure canvas element respects container size
+      const canvas = renderer.domElement;
+      if (canvas) {
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+      }
+
+      needsRenderRef.current = true;
+    }, []);
     const controlsRef = useRef<OrbitControls | null>(null);
     const ifcApiRef = useRef<WebIFC.IfcAPI | null>(null);
     const modelRef = useRef<THREE.Group | null>(null);
@@ -100,7 +127,6 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
     const [isReady, setIsReady] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
-    const needsRenderRef = useRef(true);
     const wireframeRef = useRef(false);
     const transparencyRef = useRef(false);
     const originalMaterialsRef = useRef<
@@ -215,16 +241,20 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       // Initial render
       needsRenderRef.current = true;
 
-      // Resize handler
-      const handleResize = () => {
-        if (!containerRef.current) return;
-        const w = containerRef.current.clientWidth;
-        const h = containerRef.current.clientHeight;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-      };
-      window.addEventListener("resize", handleResize);
+      // Use shared resizeRenderer to handle window and container size changes
+      window.addEventListener("resize", resizeRenderer);
+
+      // Observe container size changes (e.g. when sidebars collapse)
+      const resizeObserver = new ResizeObserver(() => {
+        resizeRenderer();
+      });
+      if (containerRef.current) {
+        try {
+          resizeObserver.observe(containerRef.current as Element);
+        } catch (e) {
+          // ignore - observe may fail in some environments
+        }
+      }
 
       // Click handler for selection
       const raycaster = new THREE.Raycaster();
@@ -341,21 +371,28 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           onElementSelected(null);
         }
       };
-      containerRef.current.addEventListener("click", handleClick);
+      if (containerRef.current) {
+        containerRef.current.addEventListener("click", handleClick);
+      }
 
       setIsReady(true);
 
       // Cleanup function
       return () => {
-        window.removeEventListener("resize", handleResize);
-        containerRef.current?.removeEventListener("click", handleClick);
+        window.removeEventListener("resize", resizeRenderer);
+        try {
+          resizeObserver.disconnect();
+        } catch {}
+        if (containerRef.current) {
+          containerRef.current.removeEventListener("click", handleClick);
+        }
         if (animationIdRef.current) {
           cancelAnimationFrame(animationIdRef.current);
         }
         renderer.dispose();
         controls.dispose();
       };
-    }, []);
+    }, [resizeRenderer]);
 
     // Convert IFC geometry to Three.js mesh - individual meshes for selection
     const createMeshFromIFC = useCallback(
@@ -848,6 +885,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       clearMeasurements,
       toggleClipping,
       setClipHeight,
+      resize: resizeRenderer,
     }));
 
     // Initialize viewer on mount

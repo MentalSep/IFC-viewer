@@ -8,17 +8,28 @@ import { ProjectViewer } from "./pages/ProjectViewer";
 import "./styles/global.css";
 
 function App() {
-  const { user, hydrate } = useAuthStore();
+  const { user, initialized, initializeAuth } = useAuthStore();
 
   useEffect(() => {
-    hydrate(); // Check if user is logged in
+    const unsubscribe = initializeAuth();
+    return () => unsubscribe();
   }, []);
+
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={user ? <Navigate to="/dashboard" replace /> : <Register />}
+        />
 
         {user ? (
           <>
