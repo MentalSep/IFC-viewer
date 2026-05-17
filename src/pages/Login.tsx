@@ -23,10 +23,10 @@ export function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-container">
-        <div style={{ marginBottom: "1rem" }}>
-          <h1>🏗️ CoBIM Cloud</h1>
-          <p className="subtitle">Enterprise BIM Collaboration Platform</p>
+        <div className="auth-container">
+        <div className="auth-header">
+          <h1>CoBIM Cloud</h1>
+          <p className="subtitle">Enter your workspace and keep building</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -57,7 +57,7 @@ export function Login() {
 
           {(error || localError) && (
             <div className="error-message">
-              <strong>⚠️ Error:</strong> {error || localError}
+              <strong>Error:</strong> {error || localError}
             </div>
           )}
 
@@ -68,6 +68,9 @@ export function Login() {
 
         <p className="auth-link">
           New to CoBIM Cloud? <Link to="/register">Create an account</Link>
+        </p>
+        <p className="auth-link auth-link-secondary">
+          <Link to="/">Back to home</Link>
         </p>
       </div>
     </div>

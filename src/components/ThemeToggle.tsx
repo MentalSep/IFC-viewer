@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Icon } from "./ui/Icon";
 
 interface ThemeToggleProps {
   theme: "dark" | "light";
@@ -17,13 +18,13 @@ function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
       title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
-      <span className="theme-toggle-track">
-        <span className="theme-toggle-thumb">
-          <span className="theme-toggle-icon">
-            {theme === "dark" ? "🌙" : "☀️"}
+        <span className="theme-toggle-track">
+          <span className="theme-toggle-thumb">
+            <span className="theme-toggle-icon">
+              <Icon name={theme === "dark" ? "moon" : "sun"} />
+            </span>
           </span>
         </span>
-      </span>
       <span className="theme-toggle-label">
         {theme === "dark" ? "Dark" : "Light"}
       </span>

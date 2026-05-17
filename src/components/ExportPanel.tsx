@@ -87,7 +87,7 @@ function ExportPanel({
 
   return (
     <div className="export-panel">
-      <h3 className="export-title">📤 Export</h3>
+      <h3 className="export-title">Export</h3>
       <div className="export-buttons">
         <button
           className="export-btn"
@@ -95,7 +95,7 @@ function ExportPanel({
           disabled={comments.length === 0}
           title="Export comments as JSON"
         >
-          💾 JSON
+          JSON
         </button>
         <button
           className="export-btn"
@@ -103,14 +103,14 @@ function ExportPanel({
           disabled={comments.length === 0}
           title="Export comments as CSV"
         >
-          📊 CSV
+          CSV
         </button>
         <button
           className="export-btn"
           onClick={exportReport}
           title="Export full model report as Markdown"
         >
-          📝 Report
+          Report
         </button>
       </div>
     </div>

@@ -11,34 +11,34 @@ interface ModelTreeProps {
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  IFCWALL: "🧱",
-  IFCWALLSTANDARDCASE: "🧱",
-  IFCSLAB: "⬜",
-  IFCCOLUMN: "🏛️",
-  IFCBEAM: "📏",
-  IFCDOOR: "🚪",
-  IFCWINDOW: "🪟",
-  IFCROOF: "🏠",
-  IFCSTAIR: "🪜",
-  IFCSTAIRFLIGHT: "🪜",
-  IFCRAILING: "🔩",
-  IFCFURNISHINGELEMENT: "🪑",
-  IFCBUILDINGELEMENTPROXY: "📦",
-  IFCPLATE: "🔲",
-  IFCMEMBER: "🔗",
-  IFCCOVERING: "🎨",
-  IFCFOOTING: "⚓",
-  IFCCURTAINWALL: "🏢",
-  IFCSPACE: "📐",
-  IFCOPENINGELEMENT: "⭕",
-  IFCFLOWSEGMENT: "🔧",
-  IFCFLOWTERMINAL: "🔧",
-  IFCDISTRIBUTIONELEMENT: "⚙️",
+  IFCWALL: "WL",
+  IFCWALLSTANDARDCASE: "WL",
+  IFCSLAB: "SL",
+  IFCCOLUMN: "CL",
+  IFCBEAM: "BM",
+  IFCDOOR: "DR",
+  IFCWINDOW: "WN",
+  IFCROOF: "RF",
+  IFCSTAIR: "ST",
+  IFCSTAIRFLIGHT: "SF",
+  IFCRAILING: "RL",
+  IFCFURNISHINGELEMENT: "FR",
+  IFCBUILDINGELEMENTPROXY: "PX",
+  IFCPLATE: "PT",
+  IFCMEMBER: "MB",
+  IFCCOVERING: "CV",
+  IFCFOOTING: "FT",
+  IFCCURTAINWALL: "CW",
+  IFCSPACE: "SP",
+  IFCOPENINGELEMENT: "OP",
+  IFCFLOWSEGMENT: "FS",
+  IFCFLOWTERMINAL: "FT",
+  IFCDISTRIBUTIONELEMENT: "DE",
 };
 
 function getIcon(type: string): string {
   const upper = type.toUpperCase();
-  return TYPE_ICONS[upper] ?? "🔹";
+  return TYPE_ICONS[upper] ?? "EL";
 }
 
 function friendlyName(type: string): string {

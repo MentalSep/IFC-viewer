@@ -1,17 +1,7 @@
 import { create } from "zustand";
-import { projectsApi } from "../api/projectsApi";
+import { projectsApi, type ProjectRecord } from "../api/projectsApi";
 
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  code?: string;
-  ownerId: string;
-  status: string;
-  createdAt: string;
-  documentsCount?: number;
-  documents: any[];
-}
+type Project = ProjectRecord;
 
 interface ProjectsState {
   projects: Project[];
@@ -20,12 +10,14 @@ interface ProjectsState {
   error: string | null;
 
   fetch: () => Promise<void>;
+  subscribe: () => () => void;
   create: (name: string, description?: string) => Promise<Project>;
+  joinBySessionCode: (sessionCode: string) => Promise<Project>;
   setCurrentProject: (project: Project) => void;
   loadProject: (projectId: string) => Promise<void>;
 }
 
-export const useProjectsStore = create<ProjectsState>((set, get) => ({
+export const useProjectsStore = create<ProjectsState>((set) => ({
   projects: [],
   currentProject: null,
   loading: false,
@@ -41,12 +33,42 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
     }
   },
 
+  subscribe: () =>
+    projectsApi.subscribe(
+      (projects) => {
+        set({ projects, loading: false, error: null });
+      },
+      (error) => {
+        set({ error: error.message, loading: false });
+      },
+    ),
+
   create: async (name, description) => {
     try {
       const project = await projectsApi.create(name, description);
       set((state) => ({ projects: [project, ...state.projects] }));
       return project;
     } catch (err: any) {
+      throw err;
+    }
+  },
+
+  joinBySessionCode: async (sessionCode) => {
+    set({ loading: true, error: null });
+    try {
+      const project = await projectsApi.joinBySessionCode(sessionCode);
+      set((state) => {
+        const exists = state.projects.some((item) => item.id === project.id);
+        return {
+          projects: exists
+            ? state.projects.map((item) => (item.id === project.id ? project : item))
+            : [project, ...state.projects],
+          loading: false,
+        };
+      });
+      return project;
+    } catch (err: any) {
+      set({ error: err.message, loading: false });
       throw err;
     }
   },

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, FormEvent } from "react";
+import { Icon, type IconName } from "./ui/Icon";
 
 export type ProfessionalRole =
   | "Architect"
@@ -23,16 +24,16 @@ export const ROLES: ProfessionalRole[] = [
 
 export const ROLE_META: Record<
   ProfessionalRole,
-  { icon: string; color: string }
+  { icon: IconName; color: string }
 > = {
-  Architect: { icon: "📐", color: "#38bdf8" },
-  Electrician: { icon: "⚡", color: "#facc15" },
-  Plumber: { icon: "🔧", color: "#60a5fa" },
-  "Structural Engineer": { icon: "🏗️", color: "#f97316" },
-  "HVAC Engineer": { icon: "❄️", color: "#a78bfa" },
-  "Project Manager": { icon: "📋", color: "#fb923c" },
-  "Fire Safety": { icon: "🔥", color: "#ef4444" },
-  "Interior Designer": { icon: "🎨", color: "#f472b6" },
+  Architect: { icon: "drafting", color: "#38bdf8" },
+  Electrician: { icon: "bolt", color: "#facc15" },
+  Plumber: { icon: "wrench", color: "#60a5fa" },
+  "Structural Engineer": { icon: "building", color: "#f97316" },
+  "HVAC Engineer": { icon: "snow", color: "#a78bfa" },
+  "Project Manager": { icon: "clipboard", color: "#fb923c" },
+  "Fire Safety": { icon: "flame", color: "#ef4444" },
+  "Interior Designer": { icon: "palette", color: "#f472b6" },
 };
 
 export interface ElementComment {
@@ -70,9 +71,9 @@ function friendlyType(type: string): string {
 }
 
 const PRIORITY_LABELS = {
-  info: { label: "Info", icon: "ℹ️" },
-  warning: { label: "Warning", icon: "⚠️" },
-  critical: { label: "Critical", icon: "🚨" },
+  info: { label: "Info", icon: "info" as IconName },
+  warning: { label: "Warning", icon: "warning" as IconName },
+  critical: { label: "Critical", icon: "critical" as IconName },
 };
 
 function ElementComments({
@@ -129,7 +130,7 @@ function ElementComments({
   return (
     <div className="elem-comments">
       <div className="elem-comments-header">
-        <h3 className="elem-comments-title">💬 Comments</h3>
+        <h3 className="elem-comments-title">Comments</h3>
         <div className="elem-comments-tabs">
           <button
             className={`elem-tab${filterMode === "element" ? " active" : ""}`}
@@ -179,10 +180,10 @@ function ElementComments({
                     background: `${meta.color}15`,
                   }}
                 >
-                  {meta.icon} {c.role}
+                  <Icon name={meta.icon} /> {c.role}
                 </span>
                 <span className="elem-comment-pri">
-                  {PRIORITY_LABELS[c.priority].icon}
+                  <Icon name={PRIORITY_LABELS[c.priority].icon} />
                 </span>
               </div>
               <div className="elem-comment-body">
@@ -214,9 +215,9 @@ function ElementComments({
                 setPriority(e.target.value as "info" | "warning" | "critical")
               }
             >
-              <option value="info">ℹ️ Info</option>
-              <option value="warning">⚠️ Warning</option>
-              <option value="critical">🚨 Critical</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="critical">Critical</option>
             </select>
           </div>
           <div className="elem-comment-form-input">
@@ -233,7 +234,7 @@ function ElementComments({
               className="chat-send-btn"
               disabled={!text.trim()}
             >
-              ➤
+              <Icon name="send" />
             </button>
           </div>
         </form>

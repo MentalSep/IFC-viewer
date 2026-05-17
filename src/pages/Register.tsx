@@ -37,9 +37,9 @@ export function Register() {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        <div style={{ marginBottom: "1rem" }}>
-          <h1>🏗️ CoBIM Cloud</h1>
-          <p className="subtitle">Start collaborating on BIM projects</p>
+        <div className="auth-header">
+          <h1>CoBIM Cloud</h1>
+          <p className="subtitle">Launch your BIM collaboration space</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -94,7 +94,7 @@ export function Register() {
 
           {(error || localError) && (
             <div className="error-message">
-              <strong>⚠️ Error:</strong> {error || localError}
+              <strong>Error:</strong> {error || localError}
             </div>
           )}
 
@@ -105,6 +105,9 @@ export function Register() {
 
         <p className="auth-link">
           Already have an account? <Link to="/login">Sign in here</Link>
+        </p>
+        <p className="auth-link auth-link-secondary">
+          <Link to="/">Back to home</Link>
         </p>
       </div>
     </div>

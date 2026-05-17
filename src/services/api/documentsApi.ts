@@ -5,15 +5,18 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   Timestamp,
+  Unsubscribe,
   updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
-import { firebaseAuth, firebaseDb } from "../firebase/client";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { firebaseAuth, firebaseDb, firebaseStorage } from "../firebase/client";
 
 function toIso(value: unknown): string {
   if (value instanceof Timestamp) return value.toDate().toISOString();
@@ -130,6 +133,46 @@ export const documentsApi = {
     });
   },
 
+  subscribe: (
+    projectId: string,
+    onDocuments: (documents: Array<{
+      id: string;
+      name: string;
+      fileSize: number;
+      projectId: string;
+      createdBy: string;
+      status: string;
+      createdAt: string;
+      metadata: Record<string, unknown>;
+    }>) => void,
+    onError?: (error: Error) => void,
+  ): Unsubscribe => {
+    const docsQuery = query(
+      collection(firebaseDb, "projects", projectId, "documents"),
+      orderBy("updatedAt", "desc"),
+    );
+    return onSnapshot(
+      docsQuery,
+      (docsSnap) => {
+        const documents = docsSnap.docs.map((documentDoc) => {
+          const data = documentDoc.data();
+          return {
+            id: documentDoc.id,
+            name: data.name ?? "Unnamed document",
+            fileSize: data.fileSize ?? 0,
+            projectId,
+            createdBy: data.createdBy ?? "",
+            status: data.status ?? "active",
+            createdAt: toIso(data.createdAt),
+            metadata: data.metadata ?? {},
+          };
+        });
+        onDocuments(documents);
+      },
+      (err) => onError?.(new Error(err.message || "Failed to subscribe to documents")),
+    );
+  },
+
   upload: async (projectId: string, file: File, description?: string) => {
     const uid = requireUid();
     const documentRef = await getDocumentRef(projectId, file.name);
@@ -139,7 +182,13 @@ export const documentsApi = {
 
     const safeFileName = sanitizeFileName(file.name);
     const localFileKey = `projects/${projectId}/documents/${documentRef.id}/v${versionNumber}-${Date.now()}-${safeFileName}`;
+    const storagePath = `projects/${projectId}/documents/${documentRef.id}/${safeFileName}-v${versionNumber}`;
     await putLocalFile(localFileKey, file);
+    const storageReference = ref(firebaseStorage, storagePath);
+    await uploadBytes(storageReference, file, {
+      contentType: file.type || "application/octet-stream",
+    });
+    const downloadUrl = await getDownloadURL(storageReference);
 
     const versionsRef = collection(
       firebaseDb,
@@ -156,6 +205,8 @@ export const documentsApi = {
       fileSize: file.size,
       mimeType: file.type || "application/octet-stream",
       localFileKey,
+      storagePath,
+      downloadUrl,
       changelog: description ?? "",
       createdBy: uid,
       isActive: true,
@@ -172,6 +223,7 @@ export const documentsApi = {
       metadata: {
         ...(currentDoc.data()?.metadata ?? {}),
         mimeType: file.type || "application/octet-stream",
+        storagePath,
       },
       currentVersionNumber: versionNumber,
       activeVersionId: createdVersion.id,
@@ -276,6 +328,12 @@ export const documentsApi = {
     const localFileKey = activeVersionSnap.data().localFileKey as
       | string
       | undefined;
+    const path = activeVersionSnap.data().storagePath as string | undefined;
+    const url = activeVersionSnap.data().downloadUrl as string | undefined;
+    if (url) return url;
+    if (path) {
+      return getDownloadURL(ref(firebaseStorage, path));
+    }
     if (localFileKey) {
       const localBlob = await getLocalFile(localFileKey);
       if (!localBlob) {
@@ -285,14 +343,7 @@ export const documentsApi = {
       }
       return URL.createObjectURL(localBlob);
     }
-
-    const path = activeVersionSnap.data().storagePath as string | undefined;
-    const url = activeVersionSnap.data().downloadUrl as string | undefined;
-    if (url) return url;
-    if (!path) throw new Error("Version file path not found");
-    throw new Error(
-      "Cloud file storage is not configured for this version on the current plan.",
-    );
+    throw new Error("Version file path not found");
   },
 };
 

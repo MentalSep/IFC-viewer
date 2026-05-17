@@ -14,6 +14,7 @@ import ElementComments, {
   type ElementCommentDraft,
   type ProfessionalRole,
 } from "../components/ElementComments";
+import DocumentBrowser from "../components/DocumentBrowser";
 import {
   addDoc,
   collection,
@@ -28,6 +29,21 @@ import { firebaseDb } from "../services/firebase/client";
 import type { ElementTypeInfo } from "../components/ModelTree";
 import type { SelectedElementData } from "../components/PropertiesPanel";
 import "../styles/global.css";
+import "../styles/pages/project-viewer.css";
+
+const LAST_PROJECT_KEY = "ifc_last_project_id";
+const PROJECT_SESSION_PREFIX = "ifc_project_session_";
+
+type RightPanelTab = "properties" | "comments" | "documents";
+
+interface ProjectSessionState {
+  theme: "dark" | "light";
+  showLeftSidebar: boolean;
+  showRightSidebar: boolean;
+  rightPanelTab: RightPanelTab;
+  searchQuery: string;
+  userRole: ProfessionalRole;
+}
 
 export function ProjectViewer() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -51,16 +67,19 @@ export function ProjectViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [rightPanelTab, setRightPanelTab] = useState<"properties" | "comments">(
-    "properties",
-  );
+  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("properties");
   const [comments, setComments] = useState<ElementComment[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userRole, setUserRole] = useState<ProfessionalRole>("Architect");
+  const loadStatusTimerRef = useRef<number | null>(null);
 
   // Blank canvas - user uploads file
 
   const handleFileSelected = (file: File) => {
+    if (loadStatusTimerRef.current !== null) {
+      clearTimeout(loadStatusTimerRef.current);
+    }
+
     const startTime = performance.now();
     setLoadedFile(file);
     setLoadedInfo({
@@ -70,13 +89,11 @@ export function ProjectViewer() {
     setStatus("Loading...");
     setSelectedElement(null);
 
-    const timer = setTimeout(() => {
+    loadStatusTimerRef.current = window.setTimeout(() => {
       const endTime = performance.now();
       setLoadTimeMs(endTime - startTime);
       setStatus("Model loaded successfully");
     }, 1000);
-
-    return () => clearTimeout(timer);
   };
 
   const handleViewerLoad = useCallback(() => {
@@ -167,6 +184,75 @@ export function ProjectViewer() {
   }, [showLeftSidebar, showRightSidebar]);
 
   useEffect(() => {
+    return () => {
+      if (loadStatusTimerRef.current !== null) {
+        clearTimeout(loadStatusTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!projectId) return;
+    localStorage.setItem(LAST_PROJECT_KEY, projectId);
+
+    const stored = localStorage.getItem(`${PROJECT_SESSION_PREFIX}${projectId}`);
+    if (!stored) return;
+
+    try {
+      const parsed = JSON.parse(stored) as Partial<ProjectSessionState>;
+      if (parsed.theme === "dark" || parsed.theme === "light") {
+        setTheme(parsed.theme);
+        document.documentElement.setAttribute("data-theme", parsed.theme);
+      }
+      if (typeof parsed.showLeftSidebar === "boolean") {
+        setShowLeftSidebar(parsed.showLeftSidebar);
+      }
+      if (typeof parsed.showRightSidebar === "boolean") {
+        setShowRightSidebar(parsed.showRightSidebar);
+      }
+      if (
+        parsed.rightPanelTab === "properties" ||
+        parsed.rightPanelTab === "comments" ||
+        parsed.rightPanelTab === "documents"
+      ) {
+        setRightPanelTab(parsed.rightPanelTab);
+      }
+      if (typeof parsed.searchQuery === "string") {
+        setSearchQuery(parsed.searchQuery);
+      }
+      if (parsed.userRole) {
+        setUserRole(parsed.userRole);
+      }
+    } catch {
+      localStorage.removeItem(`${PROJECT_SESSION_PREFIX}${projectId}`);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const sessionState: ProjectSessionState = {
+      theme,
+      showLeftSidebar,
+      showRightSidebar,
+      rightPanelTab,
+      searchQuery,
+      userRole,
+    };
+    localStorage.setItem(
+      `${PROJECT_SESSION_PREFIX}${projectId}`,
+      JSON.stringify(sessionState),
+    );
+  }, [
+    projectId,
+    theme,
+    showLeftSidebar,
+    showRightSidebar,
+    rightPanelTab,
+    searchQuery,
+    userRole,
+  ]);
+
+  useEffect(() => {
     if (!projectId) return;
 
     const messagesQuery = query(
@@ -252,101 +338,38 @@ export function ProjectViewer() {
   return (
     <div className="app-container" data-theme={theme}>
       {/* Header */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "50px",
-          background: "var(--panel)",
-          borderBottom: "1px solid var(--border)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "0 20px",
-          zIndex: 1000,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <div className="project-topbar">
+        <div className="project-topbar-left">
           <button
             onClick={() => navigate("/dashboard")}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--accent)",
-              cursor: "pointer",
-              fontSize: "16px",
-              padding: "4px 8px",
-            }}
+            className="project-topbar-link"
           >
             ← Dashboard
           </button>
-          <h1 style={{ margin: 0, fontSize: "18px", fontWeight: 600 }}>
+          <h1 className="project-topbar-title">
             Project {projectId?.slice(0, 8)}...
           </h1>
-          <span style={{ fontSize: "13px", color: "var(--muted)" }}>
+          <span className="project-topbar-user">
             {user?.name}
           </span>
         </div>
         <button
           onClick={() => navigate("/dashboard")}
-          style={{
-            padding: "8px 16px",
-            background: "var(--accent)",
-            color: "#000",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: 500,
-          }}
+          className="project-topbar-btn"
         >
           Back to Dashboard
         </button>
       </div>
 
       {/* Main Layout */}
-      <div
-        style={{
-          display: "flex",
-          height: "calc(100vh - 50px)",
-          marginTop: "50px",
-          width: "100%",
-          overflow: "hidden",
-        }}
-      >
+      <div className="project-layout">
         {/* Left Sidebar */}
         {showLeftSidebar && (
-          <div
-            style={{
-              width: "320px",
-              borderRight: "1px solid var(--border)",
-              overflow: "auto",
-              background: "var(--panel)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                padding: "8px",
-                borderBottom: "1px solid var(--border)",
-                display: "flex",
-                justifyContent: "flex-end",
-              }}
-            >
+          <div className="project-left-sidebar">
+            <div className="project-sidebar-controls">
               <button
                 onClick={() => setShowLeftSidebar(false)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--muted)",
-                  cursor: "pointer",
-                  padding: "4px 8px",
-                  fontSize: "14px",
-                }}
+                className="project-sidebar-toggle-btn"
                 title="Collapse sidebar"
               >
                 ‹
@@ -370,49 +393,19 @@ export function ProjectViewer() {
         )}
 
         {/* Main Viewer */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            position: "relative",
-          }}
-        >
+        <div className="project-main">
           {/* Toggle Left Sidebar Button */}
           {!showLeftSidebar && (
             <button
               onClick={() => setShowLeftSidebar(true)}
-              style={{
-                position: "absolute",
-                top: "62px",
-                left: "8px",
-                zIndex: 100,
-                background: "var(--panel)",
-                border: "1px solid var(--border)",
-                color: "var(--text)",
-                cursor: "pointer",
-                padding: "6px 10px",
-                borderRadius: "4px",
-                fontSize: "12px",
-              }}
+              className="project-open-left-btn"
               title="Open sidebar"
             >
               ☰
             </button>
           )}
           {/* Toolbar */}
-          <div
-            style={{
-              height: "60px",
-              borderBottom: "1px solid var(--border)",
-              padding: "0 12px",
-              display: "flex",
-              alignItems: "center",
-              background: "var(--panel-2)",
-              gap: "4px",
-              overflow: "auto",
-            }}
-          >
+          <div className="project-toolbar-row">
             <Toolbar
               onToggleWireframe={handleToggleWireframe}
               onToggleGrid={handleToggleGrid}
@@ -429,9 +422,9 @@ export function ProjectViewer() {
           </div>
 
           {/* Viewer + Right Panels */}
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          <div className="project-viewer-row">
             {/* 3D Viewer */}
-            <div style={{ flex: 1, position: "relative" }}>
+            <div className="project-viewer-canvas">
               <IFCViewer
                 ref={ifcViewerRef}
                 file={loadedFile}
@@ -451,19 +444,7 @@ export function ProjectViewer() {
               {!showRightSidebar && (
                 <button
                   onClick={() => setShowRightSidebar(true)}
-                  style={{
-                    position: "absolute",
-                    right: "8px",
-                    top: "8px",
-                    zIndex: 100,
-                    background: "var(--panel)",
-                    border: "1px solid var(--border)",
-                    color: "var(--text)",
-                    cursor: "pointer",
-                    padding: "6px 10px",
-                    borderRadius: "4px",
-                    fontSize: "12px",
-                  }}
+                  className="project-open-right-btn"
                   title="Open properties panel"
                 >
                   ☰
@@ -473,26 +454,9 @@ export function ProjectViewer() {
 
             {/* Right Panels */}
             {showRightSidebar && (
-              <div
-                style={{
-                  width: "300px",
-                  borderLeft: "1px solid var(--border)",
-                  background: "var(--panel)",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    padding: "8px",
-                    borderBottom: "1px solid var(--border)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: "8px" }}>
+              <div className="project-right-sidebar">
+                <div className="project-right-sidebar-header">
+                  <div className="project-right-tab-row">
                     <button
                       className={`tab-btn ${rightPanelTab === "properties" ? "active" : ""}`}
                       onClick={() => setRightPanelTab("properties")}
@@ -507,24 +471,24 @@ export function ProjectViewer() {
                     >
                       Comments
                     </button>
+                    <button
+                      className={`tab-btn ${rightPanelTab === "documents" ? "active" : ""}`}
+                      onClick={() => setRightPanelTab("documents")}
+                      title="Documents"
+                    >
+                      Documents
+                    </button>
                   </div>
                   <button
                     onClick={() => setShowRightSidebar(false)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--muted)",
-                      cursor: "pointer",
-                      padding: "4px 8px",
-                      fontSize: "14px",
-                    }}
+                    className="project-sidebar-toggle-btn"
                     title="Collapse panel"
                   >
                     ›
                   </button>
                 </div>
 
-                <div style={{ flex: 1, overflow: "auto" }}>
+                <div className="project-right-content">
                   {rightPanelTab === "properties" ? (
                     selectedElement ? (
                       <PropertiesPanel
@@ -532,17 +496,11 @@ export function ProjectViewer() {
                         onClose={() => setSelectedElement(null)}
                       />
                     ) : (
-                      <div
-                        style={{
-                          padding: "16px",
-                          color: "var(--muted)",
-                          fontSize: "13px",
-                        }}
-                      >
+                      <div className="project-empty-properties">
                         Select an element to view properties
                       </div>
                     )
-                  ) : (
+                  ) : rightPanelTab === "comments" ? (
                     <ElementComments
                       selectedExpressId={selectedElement?.expressId ?? null}
                       selectedElementType={selectedElement?.type ?? null}
@@ -551,6 +509,15 @@ export function ProjectViewer() {
                       userName={user?.name ?? "Guest"}
                       userRole={userRole}
                     />
+                  ) : projectId ? (
+                    <DocumentBrowser
+                      projectId={projectId}
+                      onSelectDocument={handleFileSelected}
+                    />
+                  ) : (
+                    <div className="project-empty-properties">
+                      Project is not available.
+                    </div>
                   )}
                 </div>
               </div>

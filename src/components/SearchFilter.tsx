@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { Icon } from "./ui/Icon";
 
 interface SearchFilterProps {
   placeholder?: string;
@@ -33,7 +34,9 @@ function SearchFilter({
 
   return (
     <div className={`search-filter${focused ? " focused" : ""}`}>
-      <span className="search-filter-icon">🔍</span>
+      <span className="search-filter-icon">
+        <Icon name="search" />
+      </span>
       <input
         ref={inputRef}
         className="search-filter-input"
@@ -50,10 +53,10 @@ function SearchFilter({
           onClick={handleClear}
           title="Clear"
         >
-          ✕
+          <Icon name="close" />
         </button>
       )}
-      <kbd className="search-filter-kbd">⌘K</kbd>
+      <kbd className="search-filter-kbd">Ctrl+K</kbd>
     </div>
   );
 }

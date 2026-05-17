@@ -78,7 +78,7 @@ function Sidebar({
     <aside className="panel">
       <div className="sidebar-header">
         <div className="sidebar-brand">
-          <span className="sidebar-logo">🏗️</span>
+          <span className="sidebar-logo">IFC</span>
           <div>
             <h1>IFC Viewer</h1>
             <p>Load and explore IFC building models in 3D.</p>
@@ -108,10 +108,10 @@ function Sidebar({
 
         <div className="button-row">
           <button className="button" onClick={onFitCamera}>
-            📐 Fit View
+            Fit View
           </button>
           <button className="button" onClick={onResetCamera}>
-            🔄 Reset
+            Reset
           </button>
         </div>
 

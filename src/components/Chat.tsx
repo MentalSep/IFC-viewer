@@ -7,6 +7,7 @@ import {
   KeyboardEvent,
 } from "react";
 import { ROLES, ROLE_META, type ProfessionalRole } from "./ElementComments";
+import { Icon } from "./ui/Icon";
 
 export interface ChatMessage {
   id: string;
@@ -112,28 +113,22 @@ function Chat({
     [sendMessage],
   );
 
-  // ── Empty state ──
-  if (!fileName) {
-    return (
-      <aside className="panel chat-panel">
-        <h2 className="chat-title">💬 Team Chat</h2>
-        <div className="chat-empty">
-          <span className="chat-empty-icon">🏗️</span>
-          <p>Open an IFC file to collaborate with your team.</p>
-        </div>
-      </aside>
-    );
-  }
-
   // ── Join form ──
   if (!joined) {
     return (
       <aside className="panel chat-panel">
-        <h2 className="chat-title">💬 Team Chat</h2>
-        <div className="chat-file-badge">
+        <h2 className="chat-title">Team Chat</h2>
+        {fileName ? (
+          <div className="chat-file-badge">
+            <span className="chat-file-dot" />
+            {fileName}
+          </div>
+        ) : (
+          <div className="chat-file-badge">
           <span className="chat-file-dot" />
-          {fileName}
-        </div>
+            Project channel
+          </div>
+        )}
         <form className="chat-username-form" onSubmit={handleJoin}>
           <label htmlFor="chat-name">Your name</label>
           <input
@@ -172,10 +167,10 @@ function Chat({
 
   return (
     <aside className="panel chat-panel">
-      <h2 className="chat-title">💬 Team Chat</h2>
+      <h2 className="chat-title">Team Chat</h2>
       <div className="chat-file-badge">
         <span className="chat-file-dot" />
-        {fileName}
+        {fileName ?? "Project channel"}
       </div>
 
       {/* User info */}
@@ -244,7 +239,7 @@ function Chat({
           className="chat-send-btn"
           disabled={!input.trim()}
         >
-          ➤
+          <Icon name="send" />
         </button>
       </form>
     </aside>

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./services/state/useAuthStore";
+import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
@@ -16,12 +17,18 @@ function App() {
   }, []);
 
   if (!initialized) {
-    return null;
+    return (
+      <div className="app-boot">
+        <div className="loading-spinner" aria-hidden />
+        <p>Restoring your session...</p>
+      </div>
+    );
   }
 
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Home />} />
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}
@@ -35,13 +42,11 @@ function App() {
           <>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/:projectId" element={<ProjectViewer />} />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
           </>
         ) : (
-          <>
-            <Route path="*" element={<Navigate to="/login" />} />
-          </>
+          <></>
         )}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Icon } from "./ui/Icon";
 
 interface ToolbarProps {
   onToggleWireframe: () => void;
@@ -71,7 +72,9 @@ function Toolbar({
         onClick={handleToggleWireframe}
         title="Toggle wireframe (W)"
       >
-        <span className="toolbar-icon">◻</span>
+        <span className="toolbar-icon">
+          <Icon name="wireframe" />
+        </span>
         <span className="toolbar-label">Wire</span>
       </button>
       <button
@@ -79,7 +82,9 @@ function Toolbar({
         onClick={handleToggleGrid}
         title="Toggle grid (G)"
       >
-        <span className="toolbar-icon">▦</span>
+        <span className="toolbar-icon">
+          <Icon name="grid" />
+        </span>
         <span className="toolbar-label">Grid</span>
       </button>
       <button
@@ -87,7 +92,9 @@ function Toolbar({
         onClick={handleToggleTransparency}
         title="Toggle transparency / X-ray (T)"
       >
-        <span className="toolbar-icon">◐</span>
+        <span className="toolbar-icon">
+          <Icon name="xray" />
+        </span>
         <span className="toolbar-label">X-Ray</span>
       </button>
       <div className="toolbar-divider" />
@@ -96,7 +103,9 @@ function Toolbar({
         onClick={handleToggleMeasure}
         title="Measure distance — click two points (M)"
       >
-        <span className="toolbar-icon">📏</span>
+        <span className="toolbar-icon">
+          <Icon name="measure" />
+        </span>
         <span className="toolbar-label">Meas</span>
       </button>
       <button
@@ -104,7 +113,9 @@ function Toolbar({
         onClick={onClearMeasurements}
         title="Clear measurements (C)"
       >
-        <span className="toolbar-icon">🗑</span>
+        <span className="toolbar-icon">
+          <Icon name="trash" />
+        </span>
         <span className="toolbar-label">Clear</span>
       </button>
       <div className="toolbar-divider" />
@@ -114,7 +125,9 @@ function Toolbar({
           onClick={handleToggleClipping}
           title="Toggle section plane"
         >
-          <span className="toolbar-icon">✂️</span>
+          <span className="toolbar-icon">
+            <Icon name="clip" />
+          </span>
           <span className="toolbar-label">Clip</span>
         </button>
         {clipping && (
@@ -132,11 +145,15 @@ function Toolbar({
       </div>
       <div className="toolbar-divider" />
       <button className="toolbar-btn" onClick={onZoomIn} title="Zoom in (+)">
-        <span className="toolbar-icon">＋</span>
+        <span className="toolbar-icon">
+          <Icon name="zoomIn" />
+        </span>
         <span className="toolbar-label">In</span>
       </button>
       <button className="toolbar-btn" onClick={onZoomOut} title="Zoom out (-)">
-        <span className="toolbar-icon">−</span>
+        <span className="toolbar-icon">
+          <Icon name="zoomOut" />
+        </span>
         <span className="toolbar-label">Out</span>
       </button>
       <div className="toolbar-divider" />
@@ -145,7 +162,9 @@ function Toolbar({
         onClick={onScreenshot}
         title="Save screenshot as PNG (P)"
       >
-        <span className="toolbar-icon">📷</span>
+        <span className="toolbar-icon">
+          <Icon name="camera" />
+        </span>
         <span className="toolbar-label">Snap</span>
       </button>
       <button
@@ -153,7 +172,9 @@ function Toolbar({
         onClick={onShowShortcuts}
         title="Keyboard shortcuts (?)"
       >
-        <span className="toolbar-icon">⌨️</span>
+        <span className="toolbar-icon">
+          <Icon name="keyboard" />
+        </span>
         <span className="toolbar-label">Keys</span>
       </button>
     </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDocumentsStore } from "../services/state/useDocumentsStore";
 import { documentsApi } from "../services/api/documentsApi";
+import { Icon } from "./ui/Icon";
 import "../styles/components/document-browser.css";
 
 interface DocumentBrowserProps {
@@ -16,16 +17,19 @@ export default function DocumentBrowser({
     documents,
     loading,
     uploading,
-    fetch,
+    subscribe,
     upload,
     selectDocument,
     versions,
+    activateVersion,
   } = useDocumentsStore();
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState<string | null>(null);
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(projectId);
+    const unsubscribe = subscribe(projectId);
+    return () => unsubscribe();
   }, [projectId]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +50,24 @@ export default function DocumentBrowser({
       window.open(url, "_blank");
     } catch (error) {
       alert("Download failed");
+    }
+  };
+
+  const handleOpenInViewer = async (docId: string, fileName: string) => {
+    setOpeningDocId(docId);
+    try {
+      const url = await documentsApi.download(projectId, docId);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch file");
+      }
+      const blob = await response.blob();
+      const file = new File([blob], fileName, {
+        type: blob.type || "application/octet-stream",
+      });
+      onSelectDocument(file);
+    } finally {
+      setOpeningDocId(null);
     }
   };
 
@@ -81,25 +103,39 @@ export default function DocumentBrowser({
                     selectDocument(doc, projectId);
                   }}
                 >
-                  <span className="icon">📄</span>
+                  <span className="icon">
+                    <Icon name="file" />
+                  </span>
                   {doc.name}
                 </div>
                 <div className="doc-actions">
                   <button
                     className="icon-btn"
-                    onClick={() =>
-                      setShowVersions(showVersions === doc.id ? null : doc.id)
-                    }
+                    onClick={() => {
+                      const nextShow = showVersions === doc.id ? null : doc.id;
+                      setShowVersions(nextShow);
+                      if (nextShow) {
+                        void selectDocument(doc, projectId);
+                      }
+                    }}
                     title="View versions"
                   >
-                    ⏱️
+                    <Icon name="history" />
                   </button>
                   <button
                     className="icon-btn"
                     onClick={() => handleDownload(doc.id)}
                     title="Download"
                   >
-                    ⬇️
+                    <Icon name="download" />
+                  </button>
+                  <button
+                    className="icon-btn"
+                    onClick={() => void handleOpenInViewer(doc.id, doc.name)}
+                    title="Open in viewer"
+                    disabled={openingDocId === doc.id}
+                  >
+                    {openingDocId === doc.id ? "..." : <Icon name="eye" />}
                   </button>
                 </div>
               </div>
@@ -118,9 +154,9 @@ export default function DocumentBrowser({
                       {!v.isActive && (
                         <button
                           className="activate-btn"
-                          onClick={() => {
-                            // Activate version
-                          }}
+                          onClick={() =>
+                            void activateVersion(projectId, doc.id, v.id)
+                          }
                         >
                           Activate
                         </button>

@@ -20,7 +20,7 @@ function ModelStats({
 
   return (
     <div className="model-stats">
-      <h3 className="model-stats-title">📊 Model Info</h3>
+      <h3 className="model-stats-title">Model Info</h3>
       <div className="model-stats-grid">
         <div className="model-stat">
           <span className="model-stat-value">{totalElements}</span>

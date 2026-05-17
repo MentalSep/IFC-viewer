@@ -42,9 +42,9 @@ function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
     <div className="shortcuts-overlay" onClick={onClose}>
       <div className="shortcuts-modal" onClick={(e) => e.stopPropagation()}>
         <div className="shortcuts-header">
-          <h2 className="shortcuts-title">⌨️ Keyboard Shortcuts</h2>
+          <h2 className="shortcuts-title">Keyboard Shortcuts</h2>
           <button className="shortcuts-close" onClick={onClose}>
-            ✕
+            x
           </button>
         </div>
         <div className="shortcuts-list">
