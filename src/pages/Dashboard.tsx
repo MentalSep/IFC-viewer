@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
-import { useAuthStore } from "../services/state/useAuthStore";
+import { Navbar } from "../components/Navbar";
+import { useAppLanguage } from "../components/AppLanguage";
 import { useProjectsStore } from "../services/state/useProjectsStore";
 import "../styles/pages/dashboard.css";
 
@@ -9,7 +10,8 @@ const LAST_PROJECT_KEY = "ifc_last_project_id";
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const location = useLocation();
+  const { copy } = useAppLanguage();
   const { projects, loading, error, fetch, subscribe, create, joinBySessionCode } =
     useProjectsStore();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -30,13 +32,21 @@ export function Dashboard() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get("session");
+    if (code) {
+      setSessionCode(code.toUpperCase());
+    }
+  }, [location.search]);
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
     const trimmedName = newProjectName.trim();
     const trimmedDesc = newProjectDesc.trim();
     if (!trimmedName) {
-      setCreateError("Project name is required");
+      setCreateError(copy.dashboard.requiredProjectName);
       return;
     }
 
@@ -65,7 +75,7 @@ export function Dashboard() {
     setJoinError("");
     const normalizedCode = sessionCode.trim().toUpperCase();
     if (!normalizedCode) {
-      setJoinError("Session code is required");
+      setJoinError(copy.dashboard.requiredSessionCode);
       return;
     }
 
@@ -75,7 +85,7 @@ export function Dashboard() {
       setSessionCode("");
       handleOpenProject(joinedProject.id);
     } catch (err: any) {
-      setJoinError(err?.message || "Unable to join session");
+      setJoinError(err?.message || copy.dashboard.joinFailed);
     } finally {
       setJoining(false);
     }
@@ -93,28 +103,16 @@ export function Dashboard() {
 
   return (
     <div className="dashboard">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="dashboard-header-left">
-          <h1>CoBIM Cloud</h1>
-          <p>Enterprise BIM Collaboration</p>
-        </div>
-        <div className="dashboard-header-right">
-          <span className="user-info">Welcome, {user?.name}</span>
-          <button className="btn btn-logout" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </div>
+      <Navbar variant="dashboard" />
 
       {/* Main Content */}
       <div className="dashboard-content">
         {/* Projects Section Header */}
         <div className="section-header">
           <div>
-            <h2>Your Projects</h2>
+            <h2>{copy.dashboard.title}</h2>
             <p className="section-subtitle">
-              Manage and open your BIM projects
+              {copy.dashboard.subtitle}
             </p>
           </div>
           <div className="dashboard-actions">
@@ -123,14 +121,14 @@ export function Dashboard() {
                 className="btn btn-secondary"
                 onClick={() => handleOpenProject(lastProjectId)}
               >
-                Resume Last Session
+                {copy.dashboard.resumeLastSession}
               </button>
             )}
             <button
               className="btn btn-primary"
               onClick={() => setShowCreateForm(!showCreateForm)}
             >
-              <Icon name="plus" /> New Project
+              <Icon name="plus" /> {copy.dashboard.newProject}
             </button>
           </div>
         </div>
@@ -141,20 +139,20 @@ export function Dashboard() {
             className="projects-search"
             value={projectSearch}
             onChange={(e) => setProjectSearch(e.target.value)}
-            placeholder="Search projects by name or description..."
-            aria-label="Search projects"
+            placeholder={copy.dashboard.searchPlaceholder}
+            aria-label={copy.dashboard.searchLabel}
           />
         </div>
 
         <div className="join-session-card">
-          <h3>Join Collaboration Session</h3>
-          <p>Enter a project session code to join a shared group workspace.</p>
+          <h3>{copy.dashboard.joinTitle}</h3>
+          <p>{copy.dashboard.joinSubtitle}</p>
           <form className="join-session-form" onSubmit={handleJoinSession}>
             <input
               type="text"
               value={sessionCode}
               onChange={(e) => setSessionCode(e.target.value)}
-              placeholder="e.g. K3P8N6Q2"
+              placeholder={copy.dashboard.joinPlaceholder}
               maxLength={12}
             />
             <button
@@ -162,12 +160,12 @@ export function Dashboard() {
               className="btn btn-primary"
               disabled={joining || !sessionCode.trim()}
             >
-              {joining ? "Joining..." : "Join Session"}
+              {joining ? copy.dashboard.joining : copy.dashboard.joinSession}
             </button>
           </form>
           {joinError && (
             <div className="error-message">
-              <strong>Error:</strong> {joinError}
+              <strong>{copy.dashboard.errorPrefix}:</strong> {joinError}
             </div>
           )}
         </div>
@@ -175,14 +173,14 @@ export function Dashboard() {
         {/* Create Project Form */}
         {showCreateForm && (
           <div className="create-form-card">
-            <h3>Create New Project</h3>
+            <h3>{copy.dashboard.createTitle}</h3>
             <form onSubmit={handleCreateProject}>
               <div className="form-group">
-                <label htmlFor="projectName">Project Name</label>
+                <label htmlFor="projectName">{copy.dashboard.projectName}</label>
                 <input
                   id="projectName"
                   type="text"
-                  placeholder="e.g., Downtown Office Building"
+                  placeholder={copy.dashboard.projectNamePlaceholder}
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   required
@@ -191,10 +189,10 @@ export function Dashboard() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="projectDesc">Description (optional)</label>
+                <label htmlFor="projectDesc">{copy.dashboard.projectDesc}</label>
                 <textarea
                   id="projectDesc"
-                  placeholder="Project details, location, etc."
+                  placeholder={copy.dashboard.projectDescPlaceholder}
                   value={newProjectDesc}
                   onChange={(e) => setNewProjectDesc(e.target.value)}
                   rows={3}
@@ -203,7 +201,7 @@ export function Dashboard() {
 
               {createError && (
                 <div className="error-message">
-                  <strong>Error:</strong> {createError}
+                  <strong>{copy.dashboard.errorPrefix}:</strong> {createError}
                 </div>
               )}
 
@@ -213,14 +211,14 @@ export function Dashboard() {
                   disabled={creating || !newProjectName.trim()}
                   className="btn btn-primary"
                 >
-                  {creating ? "Creating..." : "Create Project"}
+                  {creating ? copy.dashboard.creating : copy.dashboard.createProject}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
                   className="btn btn-secondary"
                 >
-                  Cancel
+                  {copy.dashboard.cancel}
                 </button>
               </div>
             </form>
@@ -232,19 +230,19 @@ export function Dashboard() {
 
         {/* Projects Grid */}
         {loading ? (
-          <div className="loading-state">Loading your projects...</div>
+          <div className="loading-state">{copy.dashboard.loadingProjects}</div>
         ) : projects.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">
               <Icon name="folder" />
             </div>
-            <h3>No projects yet</h3>
-            <p>Create your first project to get started with CoBIM Cloud</p>
+            <h3>{copy.dashboard.noProjects}</h3>
+            <p>{copy.dashboard.noProjectsSubtitle}</p>
             <button
               className="btn btn-primary"
               onClick={() => setShowCreateForm(true)}
             >
-              Create First Project
+              {copy.dashboard.createFirstProject}
             </button>
           </div>
         ) : filteredProjects.length === 0 ? (
@@ -252,8 +250,8 @@ export function Dashboard() {
             <div className="empty-icon">
               <Icon name="search" />
             </div>
-            <h3>No matching projects</h3>
-            <p>Try a different search term.</p>
+            <h3>{copy.dashboard.noMatches}</h3>
+            <p>{copy.dashboard.noMatchesSubtitle}</p>
           </div>
         ) : (
           <div className="projects-grid">
@@ -280,7 +278,7 @@ export function Dashboard() {
                   </div>
 
                   <p className="project-description">
-                    {project.description || "No description"}
+                    {project.description || copy.dashboard.noDescription}
                   </p>
 
                   <div className="project-meta">
@@ -289,8 +287,10 @@ export function Dashboard() {
                         <Icon name="file" />
                       </span>
                       <span>
-                        {documentCount} document
-                        {documentCount !== 1 ? "s" : ""}
+                        {documentCount}{" "}
+                        {documentCount !== 1
+                          ? copy.dashboard.documentsMany
+                          : copy.dashboard.documentsOne}
                       </span>
                     </div>
                     <div className="meta-item">
@@ -305,12 +305,18 @@ export function Dashboard() {
                       <span className="meta-icon">
                         <Icon name="users" />
                       </span>
-                      <span>{project.memberCount} collaborator{project.memberCount !== 1 ? "s" : ""}</span>
+                      <span>
+                        {project.memberCount}{" "}
+                        {project.memberCount !== 1
+                          ? copy.dashboard.collaboratorMany
+                          : copy.dashboard.collaboratorOne}
+                      </span>
                     </div>
                   </div>
 
                   <div className="session-code">
-                    Session: {project.sessionCode || "Not generated yet"}
+                    {copy.dashboard.sessionPrefix}:{" "}
+                    {project.sessionCode || copy.dashboard.sessionNotGenerated}
                   </div>
 
                   <div className="project-action">
@@ -321,7 +327,7 @@ export function Dashboard() {
                         handleOpenProject(project.id);
                       }}
                     >
-                      Open Project
+                      {copy.dashboard.openProject}
                     </button>
                   </div>
                 </div>

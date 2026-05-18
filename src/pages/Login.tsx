@@ -1,11 +1,13 @@
 import React, { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
+import { useAppLanguage } from "../components/AppLanguage";
 import "../styles/pages/auth.css";
 
 export function Login() {
   const navigate = useNavigate();
   const { login, loading, error } = useAuthStore();
+  const { copy } = useAppLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [localError, setLocalError] = useState("");
@@ -26,16 +28,16 @@ export function Login() {
         <div className="auth-container">
         <div className="auth-header">
           <h1>CoBIM Cloud</h1>
-          <p className="subtitle">Enter your workspace and keep building</p>
+          <p className="subtitle">{copy.auth.loginSubtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">{copy.auth.email}</label>
             <input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={copy.auth.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -44,11 +46,11 @@ export function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{copy.auth.password}</label>
             <input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder={copy.auth.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -57,20 +59,21 @@ export function Login() {
 
           {(error || localError) && (
             <div className="error-message">
-              <strong>Error:</strong> {error || localError}
+              <strong>{copy.auth.errorPrefix}:</strong> {error || localError}
             </div>
           )}
 
           <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? copy.auth.signingIn : copy.auth.signIn}
           </button>
         </form>
 
         <p className="auth-link">
-          New to CoBIM Cloud? <Link to="/register">Create an account</Link>
+          {copy.auth.newToPlatform}{" "}
+          <Link to="/register">{copy.auth.createAccountLink}</Link>
         </p>
         <p className="auth-link auth-link-secondary">
-          <Link to="/">Back to home</Link>
+          <Link to="/">{copy.auth.backHome}</Link>
         </p>
       </div>
     </div>

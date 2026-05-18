@@ -8,6 +8,10 @@ export interface ElementTypeInfo {
 interface ModelTreeProps {
   elements: ElementTypeInfo[];
   onElementTypeClick: (type: string) => void;
+  labels?: {
+    title: string;
+    empty: string;
+  };
 }
 
 const TYPE_ICONS: Record<string, string> = {
@@ -48,8 +52,9 @@ function friendlyName(type: string): string {
   return name;
 }
 
-function ModelTree({ elements, onElementTypeClick }: ModelTreeProps) {
+function ModelTree({ elements, onElementTypeClick, labels }: ModelTreeProps) {
   const [expanded, setExpanded] = useState(true);
+  const copy = labels ?? { title: "Model Elements", empty: "No model loaded" };
 
   const totalCount = elements.reduce((sum, el) => sum + el.count, 0);
   const sorted = [...elements].sort((a, b) => b.count - a.count);
@@ -62,9 +67,9 @@ function ModelTree({ elements, onElementTypeClick }: ModelTreeProps) {
           onClick={() => setExpanded(!expanded)}
         >
           <span className="model-tree-chevron">{expanded ? "▾" : "▸"}</span>
-          <span className="model-tree-title">Model Elements</span>
+          <span className="model-tree-title">{copy.title}</span>
         </div>
-        {expanded && <p className="model-tree-empty">No model loaded</p>}
+        {expanded && <p className="model-tree-empty">{copy.empty}</p>}
       </div>
     );
   }
@@ -73,7 +78,7 @@ function ModelTree({ elements, onElementTypeClick }: ModelTreeProps) {
     <div className="model-tree">
       <div className="model-tree-header" onClick={() => setExpanded(!expanded)}>
         <span className="model-tree-chevron">{expanded ? "▾" : "▸"}</span>
-        <span className="model-tree-title">Model Elements</span>
+        <span className="model-tree-title">{copy.title}</span>
         <span className="model-tree-count">{totalCount}</span>
       </div>
       {expanded && (

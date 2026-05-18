@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
+import { Navbar } from "../components/Navbar";
 import IFCViewer, { type IFCViewerRef } from "../components/IFCViewer";
 import Sidebar from "../components/Sidebar";
 import Toolbar from "../components/Toolbar";
@@ -28,6 +29,8 @@ import { firebaseDb } from "../services/firebase/client";
 
 import type { ElementTypeInfo } from "../components/ModelTree";
 import type { SelectedElementData } from "../components/PropertiesPanel";
+import { useAppLanguage } from "../components/AppLanguage";
+import { getViewerCopy, type ViewerTheme } from "../utils/viewerI18n";
 import "../styles/global.css";
 import "../styles/pages/project-viewer.css";
 
@@ -37,7 +40,7 @@ const PROJECT_SESSION_PREFIX = "ifc_project_session_";
 type RightPanelTab = "properties" | "comments" | "documents";
 
 interface ProjectSessionState {
-  theme: "dark" | "light";
+  theme: ViewerTheme;
   showLeftSidebar: boolean;
   showRightSidebar: boolean;
   rightPanelTab: RightPanelTab;
@@ -47,8 +50,8 @@ interface ProjectSessionState {
 
 export function ProjectViewer() {
   const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { locale, cycleLocale } = useAppLanguage();
   const ifcViewerRef = useRef<IFCViewerRef>(null);
 
   const [loadedFile, setLoadedFile] = useState<File | null>(null);
@@ -56,13 +59,13 @@ export function ProjectViewer() {
     name: string;
     size: string;
   } | null>(null);
-  const [status, setStatus] = useState("Ready to load IFC file");
+  const [status, setStatus] = useState("");
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
   const [elementTypes, setElementTypes] = useState<ElementTypeInfo[]>([]);
   const [selectedElement, setSelectedElement] =
     useState<SelectedElementData | null>(null);
 
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<ViewerTheme>("dark");
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -72,10 +75,11 @@ export function ProjectViewer() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userRole, setUserRole] = useState<ProfessionalRole>("Architect");
   const loadStatusTimerRef = useRef<number | null>(null);
+  const copy = useMemo(() => getViewerCopy(locale), [locale]);
 
   // Blank canvas - user uploads file
 
-  const handleFileSelected = (file: File) => {
+  const handleFileSelected = useCallback((file: File) => {
     if (loadStatusTimerRef.current !== null) {
       clearTimeout(loadStatusTimerRef.current);
     }
@@ -86,23 +90,23 @@ export function ProjectViewer() {
       name: file.name,
       size: (file.size / 1024 / 1024).toFixed(2) + " MB",
     });
-    setStatus("Loading...");
+    setStatus(copy.shell.statusLoading);
     setSelectedElement(null);
 
     loadStatusTimerRef.current = window.setTimeout(() => {
       const endTime = performance.now();
       setLoadTimeMs(endTime - startTime);
-      setStatus("Model loaded successfully");
+      setStatus(copy.shell.statusLoaded);
     }, 1000);
-  };
+  }, [copy.shell.statusLoading, copy.shell.statusLoaded]);
 
   const handleViewerLoad = useCallback(() => {
-    setStatus("Model loaded successfully");
-  }, []);
+    setStatus(copy.shell.statusLoaded);
+  }, [copy.shell.statusLoaded]);
 
   const handleViewerError = useCallback((err: string) => {
-    setStatus(`Error: ${err}`);
-  }, []);
+    setStatus(`${copy.shell.errorPrefix}: ${err}`);
+  }, [copy.shell.errorPrefix]);
 
   const handleElementTypesReady = useCallback((types: ElementTypeInfo[]) => {
     setElementTypes(types);
@@ -160,11 +164,16 @@ export function ProjectViewer() {
   }, []);
   const handleToggleTheme = useCallback(() => {
     setTheme((prevTheme) => {
-      const newTheme = prevTheme === "dark" ? "light" : "dark";
+      const newTheme =
+        prevTheme === "dark" ? "light" : prevTheme === "light" ? "aurora" : "dark";
       document.documentElement.setAttribute("data-theme", newTheme);
       return newTheme;
     });
   }, []);
+
+  const handleToggleLocale = useCallback(() => {
+    cycleLocale();
+  }, [cycleLocale]);
 
   const handleElementTypeClick = useCallback((type: string) => {
     // Filter or highlight elements of this type
@@ -200,7 +209,11 @@ export function ProjectViewer() {
 
     try {
       const parsed = JSON.parse(stored) as Partial<ProjectSessionState>;
-      if (parsed.theme === "dark" || parsed.theme === "light") {
+      if (
+        parsed.theme === "dark" ||
+        parsed.theme === "light" ||
+        parsed.theme === "aurora"
+      ) {
         setTheme(parsed.theme);
         document.documentElement.setAttribute("data-theme", parsed.theme);
       }
@@ -336,30 +349,37 @@ export function ProjectViewer() {
   );
 
   return (
-    <div className="app-container" data-theme={theme}>
-      {/* Header */}
-      <div className="project-topbar">
-        <div className="project-topbar-left">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="project-topbar-link"
-          >
-            ← Dashboard
-          </button>
-          <h1 className="project-topbar-title">
-            Project {projectId?.slice(0, 8)}...
-          </h1>
-          <span className="project-topbar-user">
-            {user?.name}
-          </span>
+    <div className="project-viewer-page" data-theme={theme} data-locale={locale}>
+      <Navbar
+        variant="project"
+        projectTitle={`Project ${projectId?.slice(0, 8)}...`}
+      />
+
+      <section className="project-shell-header">
+        <div className="project-shell-copy">
+          <p className="project-shell-kicker">{copy.shell.title}</p>
+          <h1>{copy.shell.subtitle}</h1>
         </div>
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="project-topbar-btn"
-        >
-          Back to Dashboard
-        </button>
-      </div>
+        <div className="project-shell-actions">
+          <button
+            type="button"
+            className="project-shell-chip"
+            onClick={handleToggleLocale}
+          >
+            {copy.localeLabel}: {copy.localeNames[locale]}
+          </button>
+          <button
+            type="button"
+            className="project-shell-chip"
+                onClick={handleToggleTheme}
+              >
+                {copy.themeLabel}: {copy.themeNames[theme]}
+              </button>
+              <span className="project-shell-status">
+                {status || copy.shell.statusReady}
+              </span>
+            </div>
+          </section>
 
       {/* Main Layout */}
       <div className="project-layout">
@@ -370,7 +390,7 @@ export function ProjectViewer() {
               <button
                 onClick={() => setShowLeftSidebar(false)}
                 className="project-sidebar-toggle-btn"
-                title="Collapse sidebar"
+                title={copy.layout.collapseSidebar}
               >
                 ‹
               </button>
@@ -388,6 +408,12 @@ export function ProjectViewer() {
               onToggleTheme={handleToggleTheme}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              copy={copy.sidebar}
+              themeLabel={copy.themeLabel}
+              themeName={copy.themeNames[theme]}
+              onLocaleChange={handleToggleLocale}
+              localeLabel={copy.localeLabel}
+              localeName={copy.localeNames[locale]}
             />
           </div>
         )}
@@ -396,13 +422,13 @@ export function ProjectViewer() {
         <div className="project-main">
           {/* Toggle Left Sidebar Button */}
           {!showLeftSidebar && (
-            <button
-              onClick={() => setShowLeftSidebar(true)}
-              className="project-open-left-btn"
-              title="Open sidebar"
-            >
-              ☰
-            </button>
+              <button
+                onClick={() => setShowLeftSidebar(true)}
+                className="project-open-left-btn"
+                title={copy.layout.openSidebar}
+              >
+                ☰
+              </button>
           )}
           {/* Toolbar */}
           <div className="project-toolbar-row">
@@ -418,6 +444,7 @@ export function ProjectViewer() {
               onToggleClipping={handleToggleClipping}
               onClipHeightChange={handleClipHeightChange}
               onShowShortcuts={() => setShowShortcuts(true)}
+              copy={copy.toolbar}
             />
           </div>
 
@@ -442,13 +469,13 @@ export function ProjectViewer() {
 
               {/* Toggle Right Sidebar Button */}
               {!showRightSidebar && (
-                <button
-                  onClick={() => setShowRightSidebar(true)}
-                  className="project-open-right-btn"
-                  title="Open properties panel"
-                >
-                  ☰
-                </button>
+                  <button
+                    onClick={() => setShowRightSidebar(true)}
+                    className="project-open-right-btn"
+                    title={copy.layout.openPanel}
+                  >
+                    ☰
+                  </button>
               )}
             </div>
 
@@ -460,29 +487,29 @@ export function ProjectViewer() {
                     <button
                       className={`tab-btn ${rightPanelTab === "properties" ? "active" : ""}`}
                       onClick={() => setRightPanelTab("properties")}
-                      title="Properties"
+                      title={copy.layout.tabProperties}
                     >
-                      Properties
+                      {copy.layout.tabProperties}
                     </button>
                     <button
                       className={`tab-btn ${rightPanelTab === "comments" ? "active" : ""}`}
                       onClick={() => setRightPanelTab("comments")}
-                      title="Comments"
+                      title={copy.layout.tabComments}
                     >
-                      Comments
+                      {copy.layout.tabComments}
                     </button>
                     <button
                       className={`tab-btn ${rightPanelTab === "documents" ? "active" : ""}`}
                       onClick={() => setRightPanelTab("documents")}
-                      title="Documents"
+                      title={copy.layout.tabDocuments}
                     >
-                      Documents
+                      {copy.layout.tabDocuments}
                     </button>
                   </div>
                   <button
                     onClick={() => setShowRightSidebar(false)}
                     className="project-sidebar-toggle-btn"
-                    title="Collapse panel"
+                    title={copy.layout.collapsePanel}
                   >
                     ›
                   </button>
@@ -497,7 +524,7 @@ export function ProjectViewer() {
                       />
                     ) : (
                       <div className="project-empty-properties">
-                        Select an element to view properties
+                        {copy.layout.selectElement}
                       </div>
                     )
                   ) : rightPanelTab === "comments" ? (
@@ -509,16 +536,17 @@ export function ProjectViewer() {
                       userName={user?.name ?? "Guest"}
                       userRole={userRole}
                     />
-                  ) : projectId ? (
-                    <DocumentBrowser
-                      projectId={projectId}
-                      onSelectDocument={handleFileSelected}
-                    />
-                  ) : (
-                    <div className="project-empty-properties">
-                      Project is not available.
-                    </div>
-                  )}
+                    ) : projectId ? (
+                      <DocumentBrowser
+                        projectId={projectId}
+                        onSelectDocument={handleFileSelected}
+                        copy={copy.documents}
+                      />
+                    ) : (
+                      <div className="project-empty-properties">
+                        {copy.layout.projectUnavailable}
+                      </div>
+                    )}
                 </div>
               </div>
             )}

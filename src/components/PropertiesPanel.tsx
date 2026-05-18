@@ -1,3 +1,5 @@
+import { useAppLanguage } from "./AppLanguage";
+
 export interface ElementProperty {
   name: string;
   value: string;
@@ -21,24 +23,25 @@ function friendlyType(type: string): string {
 }
 
 function PropertiesPanel({ data, onClose }: PropertiesPanelProps) {
+  const { copy } = useAppLanguage();
   if (!data) return null;
 
   return (
     <div className="props-panel">
       <div className="props-header">
         <h3 className="props-title">{friendlyType(data.type)}</h3>
-        <button className="props-close" onClick={onClose} title="Close">
+        <button className="props-close" onClick={onClose} title={copy.properties.close}>
           ✕
         </button>
       </div>
       <div className="props-id">
-        <span className="props-label">Express ID</span>
+        <span className="props-label">{copy.properties.expressId}</span>
         <span className="props-value">#{data.expressId}</span>
       </div>
       <div className="props-divider" />
       <div className="props-list">
         {data.properties.length === 0 && (
-          <p className="props-empty">No properties available</p>
+          <p className="props-empty">{copy.properties.noProperties}</p>
         )}
         {data.properties.map((prop, i) => (
           <div key={i} className="props-row">

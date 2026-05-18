@@ -8,9 +8,16 @@ import {
 } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { STLLoader } from "three/addons/loaders/STLLoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
 import * as WebIFC from "web-ifc";
 import type { ElementTypeInfo } from "./ModelTree";
 import type { SelectedElementData, ElementProperty } from "./PropertiesPanel";
+import { getFileExtension } from "../utils/modelFormats";
+import type { ViewerTheme } from "../utils/viewerI18n";
 
 interface IFCViewerProps {
   file: File | null;
@@ -18,7 +25,7 @@ interface IFCViewerProps {
   onError: (err: string) => void;
   onElementTypesReady: (types: ElementTypeInfo[]) => void;
   onElementSelected: (data: SelectedElementData | null) => void;
-  theme?: "dark" | "light";
+  theme?: ViewerTheme;
 }
 
 export interface IFCViewerRef {
@@ -82,6 +89,19 @@ function getElementProperties(
     // Property extraction failed — return what we have
   }
   return props;
+}
+
+function disposeObject3D(object: THREE.Object3D) {
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry.dispose();
+      if (Array.isArray(child.material)) {
+        child.material.forEach((material) => material.dispose());
+      } else {
+        child.material.dispose();
+      }
+    }
+  });
 }
 
 const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
@@ -152,6 +172,29 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       minY: 0,
       maxY: 100,
     });
+
+    // Fit camera to model
+    const fitCamera = useCallback(() => {
+      const model = modelRef.current;
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      if (!model || !camera || !controls) return;
+
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const distance = maxDim * 1.5;
+
+      camera.position.set(
+        center.x + distance,
+        center.y + distance * 0.7,
+        center.z + distance,
+      );
+      controls.target.copy(center);
+      controls.update();
+      needsRenderRef.current = true;
+    }, []);
 
     // Initialize the 3D viewer
     const initViewer = useCallback(async () => {
@@ -586,6 +629,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           needsRenderRef.current = true;
 
           onLoad();
+          fitCamera();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           onError(`Failed to load IFC: ${message}`);
@@ -593,7 +637,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           setIsLoading(false);
         }
       },
-      [createMeshFromIFC, onLoad, onError, onElementTypesReady],
+      [createMeshFromIFC, fitCamera, onLoad, onError, onElementTypesReady],
     );
 
     // Load from File
@@ -610,28 +654,115 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       [loadIFCData, onError],
     );
 
-    // Fit camera to model
-    const fitCamera = useCallback(() => {
-      const model = modelRef.current;
-      const camera = cameraRef.current;
-      const controls = controlsRef.current;
-      if (!model || !camera || !controls) return;
+    const loadThreeModel = useCallback(
+      async (file: File) => {
+        const scene = sceneRef.current;
+        if (!scene) return;
 
-      const box = new THREE.Box3().setFromObject(model);
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const distance = maxDim * 1.5;
+        setIsLoading(true);
+        elementDataRef.current.clear();
+        originalMaterialsRef.current.clear();
+        onElementTypesReady([]);
+        onElementSelected(null);
 
-      camera.position.set(
-        center.x + distance,
-        center.y + distance * 0.7,
-        center.z + distance,
-      );
-      controls.target.copy(center);
-      controls.update();
-      needsRenderRef.current = true;
-    }, []);
+        if (modelRef.current) {
+          disposeObject3D(modelRef.current);
+          scene.remove(modelRef.current);
+          modelRef.current = null;
+        }
+
+        if (currentModelIdRef.current !== null && ifcApiRef.current) {
+          try {
+            ifcApiRef.current.CloseModel(currentModelIdRef.current);
+          } catch {
+            // ignore
+          }
+          currentModelIdRef.current = null;
+        }
+
+        try {
+          const extension = getFileExtension(file.name);
+          const buffer = await file.arrayBuffer();
+          let model: THREE.Object3D | null = null;
+
+          if (extension === "glb" || extension === "gltf") {
+            const loader = new GLTFLoader();
+            model = await new Promise<THREE.Object3D>((resolve, reject) => {
+              loader.parse(
+                buffer,
+                "",
+                (gltf) => resolve(gltf.scene),
+                (error) => reject(error),
+              );
+            });
+          } else if (extension === "obj") {
+            const loader = new OBJLoader();
+            const text = new TextDecoder().decode(buffer);
+            model = loader.parse(text);
+          } else if (extension === "stl") {
+            const loader = new STLLoader();
+            const geometry = loader.parse(buffer);
+            model = new THREE.Mesh(
+              geometry,
+              new THREE.MeshStandardMaterial({
+                color: 0x8ab4ff,
+                roughness: 0.7,
+                metalness: 0.1,
+                side: THREE.DoubleSide,
+              }),
+            );
+          } else if (extension === "fbx") {
+            const loader = new FBXLoader();
+            model = loader.parse(buffer, "");
+          } else if (extension === "ply") {
+            const loader = new PLYLoader();
+            const geometry = loader.parse(buffer);
+            geometry.computeVertexNormals();
+            model = new THREE.Mesh(
+              geometry,
+              new THREE.MeshStandardMaterial({
+                color: 0x9ae6b4,
+                roughness: 0.75,
+                metalness: 0.05,
+                side: THREE.DoubleSide,
+              }),
+            );
+          } else {
+            throw new Error(
+              "Unsupported 3D format. Use IFC, GLB, GLTF, OBJ, STL, FBX, or PLY.",
+            );
+          }
+
+          const group = new THREE.Group();
+          if (model) {
+            group.add(model);
+          }
+
+          const box = new THREE.Box3().setFromObject(group);
+          const size = box.getSize(new THREE.Vector3());
+          if (size.lengthSq() === 0) {
+            throw new Error("The selected file did not contain renderable geometry");
+          }
+
+          const center = box.getCenter(new THREE.Vector3());
+          group.position.sub(center);
+          group.position.y += size.y / 2;
+
+          modelRef.current = group;
+          scene.add(group);
+
+          needsRenderRef.current = true;
+          onLoad();
+          fitCamera();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          onError(`Failed to load 3D model: ${message}`);
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      [fitCamera, onElementSelected, onElementTypesReady, onLoad, onError],
+    );
 
     // Reset camera
     const resetCamera = useCallback(() => {
@@ -913,6 +1044,13 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
             color: 0xc0c8d4,
           }) as never;
         }
+      } else if (theme === "aurora") {
+        scene.background = new THREE.Color(0x101827);
+        if (grid) {
+          grid.material = new THREE.LineBasicMaterial({
+            color: 0x334155,
+          }) as never;
+        }
       } else {
         scene.background = new THREE.Color(0x0a0f1a);
         if (grid) {
@@ -930,39 +1068,20 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
       const loadFile = async () => {
         try {
-          const buffer = await file.arrayBuffer();
-          await loadIFCData(new Uint8Array(buffer));
-
-          // Fit camera after load
-          setTimeout(() => {
-            const model = modelRef.current;
-            const camera = cameraRef.current;
-            const controls = controlsRef.current;
-            if (!model || !camera || !controls) return;
-
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const distance = maxDim * 1.5;
-
-            camera.position.set(
-              center.x + distance,
-              center.y + distance * 0.7,
-              center.z + distance,
-            );
-            controls.target.copy(center);
-            controls.update();
-            needsRenderRef.current = true;
-          }, 100);
+          const extension = getFileExtension(file.name);
+          if (extension === "ifc") {
+            await loadIFCFromFile(file);
+          } else {
+            await loadThreeModel(file);
+          }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          onError(`Failed to load IFC: ${message}`);
+          onError(`Failed to load model: ${message}`);
         }
       };
 
       loadFile();
-    }, [file, isReady, loadIFCData, onError]);
+    }, [file, isReady, loadIFCFromFile, loadThreeModel, onError]);
 
     return (
       <div className="canvas-wrapper" ref={containerRef}>

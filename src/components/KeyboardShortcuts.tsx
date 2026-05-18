@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from "react";
+import { useAppLanguage } from "./AppLanguage";
 
 interface KeyboardShortcutsProps {
   open: boolean;
@@ -24,6 +25,7 @@ const SHORTCUTS = [
 ];
 
 function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
+  const { copy } = useAppLanguage();
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && open) onClose();
@@ -42,7 +44,7 @@ function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
     <div className="shortcuts-overlay" onClick={onClose}>
       <div className="shortcuts-modal" onClick={(e) => e.stopPropagation()}>
         <div className="shortcuts-header">
-          <h2 className="shortcuts-title">Keyboard Shortcuts</h2>
+          <h2 className="shortcuts-title">{copy.shortcuts.title}</h2>
           <button className="shortcuts-close" onClick={onClose}>
             x
           </button>
@@ -55,10 +57,7 @@ function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
             </div>
           ))}
         </div>
-        <p className="shortcuts-hint">
-          Press <kbd>?</kbd> to toggle this panel &nbsp;|&nbsp; <kbd>Esc</kbd>{" "}
-          to close
-        </p>
+        <p className="shortcuts-hint">{copy.shortcuts.closeHint}</p>
       </div>
     </div>
   );

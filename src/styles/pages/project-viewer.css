@@ -1,73 +1,75 @@
-.project-topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 56px;
-  background: color-mix(in srgb, var(--panel) 86%, transparent);
-  border-bottom: 1px solid var(--border);
+.project-viewer-page {
+  min-height: 100vh;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.project-shell-header {
+  display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
-  padding: 0 16px;
-  z-index: 1000;
-  backdrop-filter: blur(12px);
+  gap: 16px;
+  padding: 22px clamp(20px, 3vw, 40px) 12px;
+  max-width: 100%;
 }
 
-.project-topbar-left {
+.project-shell-copy h1 {
+  margin: 0;
+  font-size: clamp(22px, 2.6vw, 34px);
+  letter-spacing: -0.03em;
+}
+
+.project-shell-kicker {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.project-shell-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.project-topbar-link {
-  background: transparent;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  padding: 4px 8px;
-}
-
-.project-topbar-title {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.project-topbar-user {
-  font-size: 12px;
-  color: var(--muted);
-  padding: 4px 9px;
+.project-shell-chip,
+.project-shell-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.project-topbar-btn {
-  padding: 8px 12px;
-  background: linear-gradient(125deg, var(--accent), var(--accent-2));
-  color: #021014;
-  border: none;
-  border-radius: 9px;
-  cursor: pointer;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  color: var(--text);
   font-size: 13px;
-  font-weight: 700;
-  transition: all 160ms ease;
+  font-weight: 600;
 }
 
-.project-topbar-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 216, 164, 0.24);
+.project-shell-chip {
+  cursor: pointer;
+}
+
+.project-shell-chip:hover {
+  border-color: rgba(0, 216, 164, 0.38);
+}
+
+.project-shell-status {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .project-layout {
   display: flex;
-  height: calc(100vh - 56px);
-  margin-top: 56px;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   overflow: hidden;
+  padding: 0 clamp(20px, 3vw, 40px) 20px;
+  gap: 16px;
 }
 
 .project-left-sidebar {
@@ -100,6 +102,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  min-width: 0;
 }
 
 .project-open-left-btn,
@@ -117,7 +120,7 @@
 }
 
 .project-open-left-btn {
-  top: 65px;
+  top: 14px;
   left: 8px;
 }
 
@@ -127,7 +130,7 @@
 }
 
 .project-toolbar-row {
-  height: 64px;
+  min-height: 64px;
   border-bottom: 1px solid var(--border);
   padding: 0 10px;
   display: flex;
@@ -140,11 +143,13 @@
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0;
 }
 
 .project-viewer-canvas {
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 
 .project-right-sidebar {
@@ -216,12 +221,24 @@
 }
 
 @media (max-width: 980px) {
+  .project-shell-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .project-layout {
+    flex-direction: column;
+    min-height: auto;
+    height: auto;
+  }
+
   .project-left-sidebar {
-    width: 280px;
+    width: 100%;
+    max-height: 460px;
   }
 
   .project-right-sidebar {
-    width: 280px;
+    width: 100%;
   }
 
   .project-topbar-btn {
@@ -230,7 +247,11 @@
 }
 
 @media (max-width: 760px) {
-  .project-topbar-user {
-    display: none;
+  .project-layout {
+    padding-inline: 16px;
+  }
+
+  .project-shell-actions {
+    width: 100%;
   }
 }

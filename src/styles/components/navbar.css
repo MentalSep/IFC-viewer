@@ -1,0 +1,135 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px clamp(18px, 3vw, 34px);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.navbar-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.navbar-brand-logo {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #041013;
+  flex: 0 0 auto;
+}
+
+.navbar-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navbar-brand-copy strong {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.navbar-brand-copy span,
+.navbar-crumb,
+.navbar-user {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.navbar-links,
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.navbar-link,
+.navbar-action,
+.navbar-crumb {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+}
+
+.navbar-link,
+.navbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 160ms ease;
+}
+
+.navbar-link {
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+}
+
+.navbar-link:hover,
+.navbar-action-ghost:hover {
+  border-color: rgba(0, 216, 164, 0.38);
+  transform: translateY(-1px);
+}
+
+.navbar-action {
+  cursor: pointer;
+}
+
+.navbar-action-ghost {
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  color: var(--text);
+}
+
+.navbar-action-primary {
+  background: linear-gradient(130deg, var(--accent), var(--accent-2));
+  color: #021015;
+  border: none;
+  box-shadow: 0 10px 20px rgba(0, 216, 164, 0.18);
+}
+
+.navbar-user,
+.navbar-crumb {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.navbar-project-title {
+  max-width: min(44vw, 360px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .navbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .navbar-links,
+  .navbar-actions {
+    width: 100%;
+  }
+
+.navbar-actions > * {
+    flex: 1;
+    justify-content: center;
+  }
+}

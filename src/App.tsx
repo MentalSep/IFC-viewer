@@ -6,10 +6,12 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
 import { ProjectViewer } from "./pages/ProjectViewer";
+import { AppLanguageProvider, useAppLanguage } from "./components/AppLanguage";
 import "./styles/global.css";
 
-function App() {
+function AppRoutes() {
   const { user, initialized, initializeAuth } = useAuthStore();
+  const { copy } = useAppLanguage();
 
   useEffect(() => {
     const unsubscribe = initializeAuth();
@@ -20,7 +22,7 @@ function App() {
     return (
       <div className="app-boot">
         <div className="loading-spinner" aria-hidden />
-        <p>Restoring your session...</p>
+        <p>{copy.app.restoringSession}</p>
       </div>
     );
   }
@@ -49,6 +51,14 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <AppLanguageProvider>
+      <AppRoutes />
+    </AppLanguageProvider>
   );
 }
 

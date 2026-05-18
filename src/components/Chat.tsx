@@ -8,6 +8,7 @@ import {
 } from "react";
 import { ROLES, ROLE_META, type ProfessionalRole } from "./ElementComments";
 import { Icon } from "./ui/Icon";
+import { useAppLanguage } from "./AppLanguage";
 
 export interface ChatMessage {
   id: string;
@@ -43,6 +44,7 @@ function Chat({
   initialUserName,
   initialRole = "Architect",
 }: ChatProps) {
+  const { copy } = useAppLanguage();
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [username, setUsername] = useState(initialUserName ?? "");
@@ -115,9 +117,9 @@ function Chat({
 
   // ── Join form ──
   if (!joined) {
-    return (
-      <aside className="panel chat-panel">
-        <h2 className="chat-title">Team Chat</h2>
+      return (
+        <aside className="panel chat-panel">
+        <h2 className="chat-title">{copy.chat.title}</h2>
         {fileName ? (
           <div className="chat-file-badge">
             <span className="chat-file-dot" />
@@ -126,22 +128,22 @@ function Chat({
         ) : (
           <div className="chat-file-badge">
           <span className="chat-file-dot" />
-            Project channel
+            {copy.chat.projectChannel}
           </div>
         )}
         <form className="chat-username-form" onSubmit={handleJoin}>
-          <label htmlFor="chat-name">Your name</label>
+          <label htmlFor="chat-name">{copy.chat.yourName}</label>
           <input
             id="chat-name"
             className="chat-input"
             type="text"
-            placeholder="Enter your name..."
+            placeholder={copy.chat.namePlaceholder}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             maxLength={24}
             autoFocus
           />
-          <label htmlFor="chat-role">Your role</label>
+          <label htmlFor="chat-role">{copy.chat.yourRole}</label>
           <select
             id="chat-role"
             className="chat-role-select"
@@ -155,7 +157,7 @@ function Chat({
             ))}
           </select>
           <button type="submit" className="button primary chat-join-btn">
-            Join Chat
+            {copy.chat.join}
           </button>
         </form>
       </aside>
@@ -167,10 +169,10 @@ function Chat({
 
   return (
     <aside className="panel chat-panel">
-      <h2 className="chat-title">Team Chat</h2>
+      <h2 className="chat-title">{copy.chat.title}</h2>
       <div className="chat-file-badge">
         <span className="chat-file-dot" />
-        {fileName ?? "Project channel"}
+        {fileName ?? copy.chat.projectChannel}
       </div>
 
       {/* User info */}
@@ -191,7 +193,7 @@ function Chat({
       <div className="chat-messages">
         {activeMessages.length === 0 && (
           <p className="chat-placeholder">
-            No messages yet. Discuss <strong>{fileName}</strong> with your team!
+            {copy.chat.noMessages} <strong>{fileName ?? copy.chat.projectChannel}</strong>!
           </p>
         )}
         {activeMessages.map((msg) => {
@@ -228,7 +230,7 @@ function Chat({
           ref={inputRef}
           className="chat-input"
           type="text"
-          placeholder={`Message as ${role}...`}
+          placeholder={`${copy.chat.messageAs} ${role}...`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

@@ -2,16 +2,24 @@ import React, { useEffect, useState } from "react";
 import { useDocumentsStore } from "../services/state/useDocumentsStore";
 import { documentsApi } from "../services/api/documentsApi";
 import { Icon } from "./ui/Icon";
+import {
+  getSupported3DAccept,
+  isPreviewable3DFileName,
+  isSupported3DFileName,
+} from "../utils/modelFormats";
+import type { ViewerCopy } from "../utils/viewerI18n";
 import "../styles/components/document-browser.css";
 
 interface DocumentBrowserProps {
   projectId: string;
   onSelectDocument: (file: File) => void;
+  copy: ViewerCopy["documents"];
 }
 
 export default function DocumentBrowser({
   projectId,
   onSelectDocument,
+  copy,
 }: DocumentBrowserProps) {
   const {
     documents,
@@ -26,6 +34,8 @@ export default function DocumentBrowser({
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState<string | null>(null);
   const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+  const [browserError, setBrowserError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribe(projectId);
@@ -36,32 +46,51 @@ export default function DocumentBrowser({
     const file = e.currentTarget.files?.[0];
     if (!file) return;
 
+    setBrowserError(null);
+    if (!isSupported3DFileName(file.name)) {
+      setBrowserError(copy.previewError);
+      e.currentTarget.value = "";
+      return;
+    }
+
     try {
       await upload(projectId, file);
       e.currentTarget.value = "";
     } catch (err) {
-      alert("Upload failed");
+      setBrowserError(err instanceof Error ? err.message : copy.uploadError);
     }
   };
 
   const handleDownload = async (docId: string) => {
+    setDownloadingDocId(docId);
+    setBrowserError(null);
     try {
-      const url = await documentsApi.download(projectId, docId);
-      window.open(url, "_blank");
+      const { blob, fileName } = await documentsApi.download(projectId, docId);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
     } catch (error) {
-      alert("Download failed");
+      setBrowserError(error instanceof Error ? error.message : copy.downloadError);
+    } finally {
+      setDownloadingDocId(null);
     }
   };
 
   const handleOpenInViewer = async (docId: string, fileName: string) => {
+    if (!isPreviewable3DFileName(fileName)) {
+      setBrowserError(copy.previewError);
+      return;
+    }
+
     setOpeningDocId(docId);
+    setBrowserError(null);
     try {
-      const url = await documentsApi.download(projectId, docId);
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch file");
-      }
-      const blob = await response.blob();
+      const { blob } = await documentsApi.download(projectId, docId);
       const file = new File([blob], fileName, {
         type: blob.type || "application/octet-stream",
       });
@@ -74,12 +103,12 @@ export default function DocumentBrowser({
   return (
     <div className="document-browser">
       <div className="browser-header">
-        <h3>Documents</h3>
+        <h3>{copy.title}</h3>
         <label className="upload-btn">
-          {uploading ? "Uploading..." : "+ Upload"}
+          {uploading ? copy.uploading : `+ ${copy.upload}`}
           <input
             type="file"
-            accept=".ifc"
+            accept={getSupported3DAccept()}
             onChange={handleFileUpload}
             disabled={uploading}
             style={{ display: "none" }}
@@ -88,9 +117,11 @@ export default function DocumentBrowser({
       </div>
 
       {loading ? (
-        <p className="loading">Loading documents...</p>
+        <p className="loading">{copy.loading}</p>
+      ) : browserError ? (
+        <div className="browser-message error">{browserError}</div>
       ) : documents.length === 0 ? (
-        <p className="empty">No documents uploaded yet</p>
+        <p className="empty">{copy.empty}</p>
       ) : (
         <div className="documents-list">
           {documents.map((doc) => (
@@ -118,23 +149,28 @@ export default function DocumentBrowser({
                         void selectDocument(doc, projectId);
                       }
                     }}
-                    title="View versions"
+                    title={copy.versions}
                   >
                     <Icon name="history" />
                   </button>
                   <button
                     className="icon-btn"
                     onClick={() => handleDownload(doc.id)}
-                    title="Download"
+                    title={copy.download}
+                    disabled={downloadingDocId === doc.id}
                   >
-                    <Icon name="download" />
+                    {downloadingDocId === doc.id ? "..." : <Icon name="download" />}
                   </button>
                   <button
                     className="icon-btn"
                     onClick={() => void handleOpenInViewer(doc.id, doc.name)}
-                    title="Open in viewer"
-                    disabled={openingDocId === doc.id}
-                  >
+                      title={
+                       isPreviewable3DFileName(doc.name)
+                         ? copy.openViewer
+                         : copy.previewUnavailable
+                     }
+                     disabled={openingDocId === doc.id || !isPreviewable3DFileName(doc.name)}
+                   >
                     {openingDocId === doc.id ? "..." : <Icon name="eye" />}
                   </button>
                 </div>
@@ -158,7 +194,7 @@ export default function DocumentBrowser({
                             void activateVersion(projectId, doc.id, v.id)
                           }
                         >
-                          Activate
+                          {copy.activate}
                         </button>
                       )}
                     </div>

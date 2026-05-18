@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, FormEvent } from "react";
 import { Icon, type IconName } from "./ui/Icon";
+import { useAppLanguage } from "./AppLanguage";
 
 export type ProfessionalRole =
   | "Architect"
@@ -71,9 +72,9 @@ function friendlyType(type: string): string {
 }
 
 const PRIORITY_LABELS = {
-  info: { label: "Info", icon: "info" as IconName },
-  warning: { label: "Warning", icon: "warning" as IconName },
-  critical: { label: "Critical", icon: "critical" as IconName },
+  info: { icon: "info" as IconName },
+  warning: { icon: "warning" as IconName },
+  critical: { icon: "critical" as IconName },
 };
 
 function ElementComments({
@@ -84,6 +85,7 @@ function ElementComments({
   userName,
   userRole,
 }: ElementCommentsProps) {
+  const { copy } = useAppLanguage();
   const [text, setText] = useState("");
   const [priority, setPriority] = useState<"info" | "warning" | "critical">(
     "info",
@@ -130,19 +132,19 @@ function ElementComments({
   return (
     <div className="elem-comments">
       <div className="elem-comments-header">
-        <h3 className="elem-comments-title">Comments</h3>
+        <h3 className="elem-comments-title">{copy.comments.title}</h3>
         <div className="elem-comments-tabs">
           <button
             className={`elem-tab${filterMode === "element" ? " active" : ""}`}
             onClick={() => setFilterMode("element")}
           >
-            Element
+            {copy.comments.tabElement}
           </button>
           <button
             className={`elem-tab${filterMode === "all" ? " active" : ""}`}
             onClick={() => setFilterMode("all")}
           >
-            All ({comments.length})
+            {copy.comments.tabAll} ({comments.length})
           </button>
         </div>
       </div>
@@ -160,8 +162,8 @@ function ElementComments({
         {filtered.length === 0 && (
           <p className="elem-comments-empty">
             {selectedExpressId === null
-              ? "Select an element to view or add comments."
-              : "No comments yet on this element."}
+              ? copy.comments.selectElementPrompt
+              : copy.comments.noCommentsOnElement}
           </p>
         )}
         {filtered.map((c) => {
@@ -215,16 +217,16 @@ function ElementComments({
                 setPriority(e.target.value as "info" | "warning" | "critical")
               }
             >
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="critical">Critical</option>
+              <option value="info">{copy.comments.info}</option>
+              <option value="warning">{copy.comments.warning}</option>
+              <option value="critical">{copy.comments.critical}</option>
             </select>
           </div>
           <div className="elem-comment-form-input">
             <input
               className="chat-input"
               type="text"
-              placeholder={`Comment as ${userRole}...`}
+              placeholder={`${copy.comments.commentAs} ${userRole}...`}
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={500}

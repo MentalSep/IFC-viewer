@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Icon } from "./ui/Icon";
+import type { ViewerCopy } from "../utils/viewerI18n";
 
 interface ToolbarProps {
   onToggleWireframe: () => void;
@@ -13,6 +14,7 @@ interface ToolbarProps {
   onToggleClipping: () => void;
   onClipHeightChange: (ratio: number) => void;
   onShowShortcuts: () => void;
+  copy: ViewerCopy["toolbar"];
 }
 
 function Toolbar({
@@ -27,6 +29,7 @@ function Toolbar({
   onToggleClipping,
   onClipHeightChange,
   onShowShortcuts,
+  copy,
 }: ToolbarProps) {
   // Local state for button display - doesn't trigger parent re-renders
   const [wireframe, setWireframe] = useState(false);
@@ -70,65 +73,65 @@ function Toolbar({
       <button
         className={`toolbar-btn${wireframe ? " active" : ""}`}
         onClick={handleToggleWireframe}
-        title="Toggle wireframe (W)"
+        title={copy.wire}
       >
         <span className="toolbar-icon">
           <Icon name="wireframe" />
         </span>
-        <span className="toolbar-label">Wire</span>
+        <span className="toolbar-label">{copy.wire}</span>
       </button>
       <button
         className={`toolbar-btn${gridVisible ? " active" : ""}`}
         onClick={handleToggleGrid}
-        title="Toggle grid (G)"
+        title={copy.grid}
       >
         <span className="toolbar-icon">
           <Icon name="grid" />
         </span>
-        <span className="toolbar-label">Grid</span>
+        <span className="toolbar-label">{copy.grid}</span>
       </button>
       <button
         className={`toolbar-btn${transparent ? " active" : ""}`}
         onClick={handleToggleTransparency}
-        title="Toggle transparency / X-ray (T)"
+        title={copy.xray}
       >
         <span className="toolbar-icon">
           <Icon name="xray" />
         </span>
-        <span className="toolbar-label">X-Ray</span>
+        <span className="toolbar-label">{copy.xray}</span>
       </button>
       <div className="toolbar-divider" />
       <button
         className={`toolbar-btn${measuring ? " active" : ""}`}
         onClick={handleToggleMeasure}
-        title="Measure distance — click two points (M)"
+        title={copy.measure}
       >
         <span className="toolbar-icon">
           <Icon name="measure" />
         </span>
-        <span className="toolbar-label">Meas</span>
+        <span className="toolbar-label">{copy.measure}</span>
       </button>
       <button
         className="toolbar-btn"
         onClick={onClearMeasurements}
-        title="Clear measurements (C)"
+        title={copy.clear}
       >
         <span className="toolbar-icon">
           <Icon name="trash" />
         </span>
-        <span className="toolbar-label">Clear</span>
+        <span className="toolbar-label">{copy.clear}</span>
       </button>
       <div className="toolbar-divider" />
       <div className="toolbar-clip-group">
         <button
           className={`toolbar-btn${clipping ? " active" : ""}`}
           onClick={handleToggleClipping}
-          title="Toggle section plane"
+          title={copy.clip}
         >
           <span className="toolbar-icon">
             <Icon name="clip" />
           </span>
-          <span className="toolbar-label">Clip</span>
+          <span className="toolbar-label">{copy.clip}</span>
         </button>
         {clipping && (
           <input
@@ -148,34 +151,34 @@ function Toolbar({
         <span className="toolbar-icon">
           <Icon name="zoomIn" />
         </span>
-        <span className="toolbar-label">In</span>
+        <span className="toolbar-label">{copy.zoomIn}</span>
       </button>
       <button className="toolbar-btn" onClick={onZoomOut} title="Zoom out (-)">
         <span className="toolbar-icon">
           <Icon name="zoomOut" />
         </span>
-        <span className="toolbar-label">Out</span>
+        <span className="toolbar-label">{copy.zoomOut}</span>
       </button>
       <div className="toolbar-divider" />
       <button
         className="toolbar-btn"
         onClick={onScreenshot}
-        title="Save screenshot as PNG (P)"
+        title={copy.screenshot}
       >
         <span className="toolbar-icon">
           <Icon name="camera" />
         </span>
-        <span className="toolbar-label">Snap</span>
+        <span className="toolbar-label">{copy.screenshot}</span>
       </button>
       <button
         className="toolbar-btn"
         onClick={onShowShortcuts}
-        title="Keyboard shortcuts (?)"
+        title={copy.shortcuts}
       >
         <span className="toolbar-icon">
           <Icon name="keyboard" />
         </span>
-        <span className="toolbar-label">Keys</span>
+        <span className="toolbar-label">{copy.shortcuts}</span>
       </button>
     </div>
   );

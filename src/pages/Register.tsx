@@ -1,11 +1,13 @@
 import React, { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
+import { useAppLanguage } from "../components/AppLanguage";
 import "../styles/pages/auth.css";
 
 export function Register() {
   const navigate = useNavigate();
   const { register, loading, error } = useAuthStore();
+  const { copy } = useAppLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,12 +19,12 @@ export function Register() {
     setLocalError("");
 
     if (password !== confirmPassword) {
-      setLocalError("Passwords do not match");
+      setLocalError(copy.auth.passwordsMismatch);
       return;
     }
 
     if (password.length < 6) {
-      setLocalError("Password must be at least 6 characters long");
+      setLocalError(copy.auth.passwordTooShort);
       return;
     }
 
@@ -39,16 +41,16 @@ export function Register() {
       <div className="auth-container">
         <div className="auth-header">
           <h1>CoBIM Cloud</h1>
-          <p className="subtitle">Launch your BIM collaboration space</p>
+          <p className="subtitle">{copy.auth.registerSubtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="name">Full Name</label>
+            <label htmlFor="name">{copy.auth.fullName}</label>
             <input
               id="name"
               type="text"
-              placeholder="John Doe"
+              placeholder={copy.auth.fullNamePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -57,11 +59,11 @@ export function Register() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">{copy.auth.email}</label>
             <input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={copy.auth.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -69,11 +71,11 @@ export function Register() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{copy.auth.password}</label>
             <input
               id="password"
               type="password"
-              placeholder="At least 6 characters"
+              placeholder={copy.auth.passwordPlaceholder}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -81,11 +83,11 @@ export function Register() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label htmlFor="confirmPassword">{copy.auth.confirmPassword}</label>
             <input
               id="confirmPassword"
               type="password"
-              placeholder="Repeat your password"
+              placeholder={copy.auth.confirmPasswordPlaceholder}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -94,20 +96,21 @@ export function Register() {
 
           {(error || localError) && (
             <div className="error-message">
-              <strong>Error:</strong> {error || localError}
+              <strong>{copy.auth.errorPrefix}:</strong> {error || localError}
             </div>
           )}
 
           <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? "Creating account..." : "Create Account"}
+            {loading ? copy.auth.creatingAccount : copy.auth.createAccount}
           </button>
         </form>
 
         <p className="auth-link">
-          Already have an account? <Link to="/login">Sign in here</Link>
+          {copy.auth.alreadyHaveAccount}{" "}
+          <Link to="/login">{copy.auth.signInHere}</Link>
         </p>
         <p className="auth-link auth-link-secondary">
-          <Link to="/">Back to home</Link>
+          <Link to="/">{copy.auth.backHome}</Link>
         </p>
       </div>
     </div>

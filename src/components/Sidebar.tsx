@@ -3,6 +3,11 @@ import ModelTree, { type ElementTypeInfo } from "./ModelTree";
 import ModelStats from "./ModelStats";
 import ThemeToggle from "./ThemeToggle";
 import SearchFilter from "./SearchFilter";
+import {
+  getPreviewable3DAccept,
+  isPreviewable3DFileName,
+} from "../utils/modelFormats";
+import type { ViewerCopy, ViewerTheme } from "../utils/viewerI18n";
 
 interface SidebarProps {
   onFileSelected: (file: File) => void;
@@ -13,10 +18,16 @@ interface SidebarProps {
   elementTypes: ElementTypeInfo[];
   onElementTypeClick: (type: string) => void;
   loadTimeMs: number | null;
-  theme: "dark" | "light";
+  theme: ViewerTheme;
   onToggleTheme: () => void;
   searchQuery: string;
   onSearchChange: (value: string) => void;
+  copy: ViewerCopy["sidebar"];
+  themeLabel: string;
+  themeName: string;
+  onLocaleChange: () => void;
+  localeLabel: string;
+  localeName: string;
 }
 
 function Sidebar({
@@ -32,6 +43,12 @@ function Sidebar({
   onToggleTheme,
   searchQuery,
   onSearchChange,
+  copy,
+  themeLabel,
+  themeName,
+  onLocaleChange,
+  localeLabel,
+  localeName,
 }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -41,7 +58,7 @@ function Sidebar({
       e.preventDefault();
       setDragging(false);
       const file = e.dataTransfer.files?.[0];
-      if (file && file.name.endsWith(".ifc")) {
+      if (file && isPreviewable3DFileName(file.name)) {
         onFileSelected(file);
       }
     },
@@ -80,11 +97,20 @@ function Sidebar({
         <div className="sidebar-brand">
           <span className="sidebar-logo">IFC</span>
           <div>
-            <h1>IFC Viewer</h1>
-            <p>Load and explore IFC building models in 3D.</p>
+            <h1>{copy.title}</h1>
+            <p>{copy.subtitle}</p>
           </div>
         </div>
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+        <div className="sidebar-header-actions">
+          <button className="sidebar-pill" onClick={onLocaleChange} type="button">
+            {localeLabel}: {localeName}
+          </button>
+          <ThemeToggle
+            theme={theme}
+            onToggle={onToggleTheme}
+            label={`${themeLabel}: ${themeName}`}
+          />
+        </div>
       </div>
 
       <div className="controls">
@@ -95,23 +121,23 @@ function Sidebar({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
         >
-          <strong>Upload IFC File</strong>
-          <span className="helper-text">Drag & drop or click to browse</span>
+          <strong>{copy.uploadTitle}</strong>
+          <span className="helper-text">{copy.uploadHint}</span>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".ifc"
+            accept={getPreviewable3DAccept()}
             onChange={handleInputChange}
             style={{ display: "none" }}
           />
         </div>
 
         <div className="button-row">
-          <button className="button" onClick={onFitCamera}>
-            Fit View
+          <button className="button" onClick={onFitCamera} type="button">
+            {copy.fitView}
           </button>
-          <button className="button" onClick={onResetCamera}>
-            Reset
+          <button className="button" onClick={onResetCamera} type="button">
+            {copy.reset}
           </button>
         </div>
 
@@ -128,19 +154,28 @@ function Sidebar({
           fileSize={loadedInfo?.size ?? null}
           elementTypes={elementTypes}
           loadTimeMs={loadTimeMs}
+          labels={{
+            title: copy.modelInfo,
+            elements: copy.elements,
+            types: copy.types,
+            size: copy.size,
+            loadTime: copy.loadTime,
+            empty: copy.noElements,
+          }}
         />
 
         {elementTypes.length > 0 && (
           <SearchFilter
             value={searchQuery}
             onChange={onSearchChange}
-            placeholder="Search element types..."
+            placeholder={copy.searchPlaceholder}
           />
         )}
 
         <ModelTree
           elements={filteredElements}
           onElementTypeClick={onElementTypeClick}
+          labels={{ title: copy.elements, empty: copy.noElements }}
         />
       </div>
     </aside>

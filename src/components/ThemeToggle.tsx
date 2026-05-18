@@ -1,12 +1,14 @@
 import { useCallback } from "react";
 import { Icon } from "./ui/Icon";
+import type { ViewerTheme } from "../utils/viewerI18n";
 
 interface ThemeToggleProps {
-  theme: "dark" | "light";
+  theme: ViewerTheme;
   onToggle: () => void;
+  label: string;
 }
 
-function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
+function ThemeToggle({ theme, onToggle, label }: ThemeToggleProps) {
   const handleClick = useCallback(() => {
     onToggle();
   }, [onToggle]);
@@ -15,18 +17,18 @@ function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
     <button
       className={`theme-toggle ${theme}`}
       onClick={handleClick}
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      title={label}
+      aria-label={label}
     >
         <span className="theme-toggle-track">
           <span className="theme-toggle-thumb">
             <span className="theme-toggle-icon">
-              <Icon name={theme === "dark" ? "moon" : "sun"} />
+              <Icon name={theme === "dark" ? "moon" : theme === "light" ? "sun" : "palette"} />
             </span>
           </span>
         </span>
       <span className="theme-toggle-label">
-        {theme === "dark" ? "Dark" : "Light"}
+        {label}
       </span>
     </button>
   );

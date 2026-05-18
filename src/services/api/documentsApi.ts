@@ -15,7 +15,7 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getBlob, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { firebaseAuth, firebaseDb, firebaseStorage } from "../firebase/client";
 
 function toIso(value: unknown): string {
@@ -330,18 +330,22 @@ export const documentsApi = {
       | undefined;
     const path = activeVersionSnap.data().storagePath as string | undefined;
     const url = activeVersionSnap.data().downloadUrl as string | undefined;
-    if (url) return url;
-    if (path) {
-      return getDownloadURL(ref(firebaseStorage, path));
-    }
+    const fileName = (activeVersionSnap.data().fileName as string | undefined) ?? "file";
     if (localFileKey) {
       const localBlob = await getLocalFile(localFileKey);
-      if (!localBlob) {
-        throw new Error(
-          "This version is stored locally on another browser/device. Re-upload it from this device.",
-        );
+      if (localBlob) {
+        return { fileName, blob: localBlob };
       }
-      return URL.createObjectURL(localBlob);
+    }
+    if (path) {
+      const blob = await getBlob(ref(firebaseStorage, path));
+      return { fileName, blob };
+    }
+    if (url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch file");
+      const blob = await response.blob();
+      return { fileName, blob };
     }
     throw new Error("Version file path not found");
   },
