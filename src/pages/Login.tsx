@@ -2,6 +2,7 @@ import React, { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
 import { useAppLanguage } from "../components/AppLanguage";
+import { AppFooter } from "../components/AppFooter";
 import "../styles/pages/auth.css";
 
 export function Login() {
@@ -24,7 +25,8 @@ export function Login() {
   };
 
   return (
-    <div className="auth-page">
+    <>
+      <div className="auth-page">
         <div className="auth-container">
         <div className="auth-header">
           <h1>CoBIM Cloud</h1>
@@ -76,6 +78,8 @@ export function Login() {
           <Link to="/">{copy.auth.backHome}</Link>
         </p>
       </div>
-    </div>
+      </div>
+      <AppFooter />
+    </>
   );
 }

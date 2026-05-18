@@ -2,8 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
 import { Navbar } from "../components/Navbar";
+import { AppFooter } from "../components/AppFooter";
 import { useAppLanguage } from "../components/AppLanguage";
 import { useProjectsStore } from "../services/state/useProjectsStore";
+import { useAuthStore } from "../services/state/useAuthStore";
+import {
+  PROJECT_ROLES,
+  isProjectRole,
+  type ProjectRole,
+} from "../services/api/projectsApi";
 import "../styles/pages/dashboard.css";
 
 const LAST_PROJECT_KEY = "ifc_last_project_id";
@@ -11,19 +18,33 @@ const LAST_PROJECT_KEY = "ifc_last_project_id";
 export function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuthStore();
   const { copy } = useAppLanguage();
-  const { projects, loading, error, fetch, subscribe, create, joinBySessionCode } =
-    useProjectsStore();
+  const {
+    projects,
+    loading,
+    error,
+    fetch,
+    subscribe,
+    create,
+    joinBySessionCode,
+    deleteById,
+  } = useProjectsStore();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
   const [createError, setCreateError] = useState("");
   const [sessionCode, setSessionCode] = useState("");
+  const [joinRole, setJoinRole] = useState<ProjectRole>("Architect");
   const [joinError, setJoinError] = useState("");
   const [joining, setJoining] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [lastProjectId, setLastProjectId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [inviteRoleByProject, setInviteRoleByProject] = useState<
+    Record<string, ProjectRole>
+  >({});
+  const isAdmin = user?.role?.toLowerCase() === "admin";
 
   useEffect(() => {
     fetch();
@@ -35,8 +56,12 @@ export function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const code = params.get("session");
+    const roleParam = params.get("role");
     if (code) {
       setSessionCode(code.toUpperCase());
+    }
+    if (roleParam && isProjectRole(roleParam)) {
+      setJoinRole(roleParam);
     }
   }, [location.search]);
 
@@ -81,7 +106,7 @@ export function Dashboard() {
 
     setJoining(true);
     try {
-      const joinedProject = await joinBySessionCode(normalizedCode);
+      const joinedProject = await joinBySessionCode(normalizedCode, joinRole);
       setSessionCode("");
       handleOpenProject(joinedProject.id);
     } catch (err: any) {
@@ -89,6 +114,32 @@ export function Dashboard() {
     } finally {
       setJoining(false);
     }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!window.confirm(copy.dashboard.deleteConfirm)) return;
+    setJoinError("");
+    try {
+      await deleteById(projectId);
+      if (lastProjectId === projectId) {
+        localStorage.removeItem(LAST_PROJECT_KEY);
+        setLastProjectId(null);
+      }
+    } catch (err: any) {
+      setJoinError(err?.message || copy.dashboard.deleteFailed);
+    }
+  };
+
+  const getInviteRole = (projectId: string): ProjectRole =>
+    inviteRoleByProject[projectId] ?? "Viewer";
+
+  const buildWhatsappInvite = (projectId: string, sessionCodeValue: string) => {
+    const role = getInviteRole(projectId);
+    const roleParam = encodeURIComponent(role);
+    const code = encodeURIComponent((sessionCodeValue || "").toUpperCase());
+    const joinUrl = `${window.location.origin}/dashboard?session=${code}&role=${roleParam}`;
+    const text = `${copy.dashboard.whatsappInviteText} (${role})\n${joinUrl}`;
+    return `https://wa.me/?text=${encodeURIComponent(text)}`;
   };
 
   const filteredProjects = useMemo(() => {
@@ -148,6 +199,18 @@ export function Dashboard() {
           <h3>{copy.dashboard.joinTitle}</h3>
           <p>{copy.dashboard.joinSubtitle}</p>
           <form className="join-session-form" onSubmit={handleJoinSession}>
+            <select
+              className="join-role-select"
+              value={joinRole}
+              onChange={(e) => setJoinRole(e.target.value as ProjectRole)}
+              aria-label={copy.dashboard.roleLabel}
+            >
+              {PROJECT_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
             <input
               type="text"
               value={sessionCode}
@@ -318,6 +381,9 @@ export function Dashboard() {
                     {copy.dashboard.sessionPrefix}:{" "}
                     {project.sessionCode || copy.dashboard.sessionNotGenerated}
                   </div>
+                  <div className="session-role">
+                    {copy.dashboard.yourRolePrefix}: {project.currentUserRole}
+                  </div>
 
                   <div className="project-action">
                     <button
@@ -329,6 +395,44 @@ export function Dashboard() {
                     >
                       {copy.dashboard.openProject}
                     </button>
+                    <select
+                      className="project-role-select"
+                      value={getInviteRole(project.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) =>
+                        setInviteRoleByProject((prev) => ({
+                          ...prev,
+                          [project.id]: e.target.value as ProjectRole,
+                        }))
+                      }
+                      aria-label={copy.dashboard.inviteRoleLabel}
+                    >
+                      {PROJECT_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                    <a
+                      className="btn btn-sm btn-secondary"
+                      href={buildWhatsappInvite(project.id, project.sessionCode)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {copy.dashboard.whatsappInvite}
+                    </a>
+                    {isAdmin && (
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteProject(project.id);
+                        }}
+                      >
+                        {copy.dashboard.deleteSession}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -336,6 +440,7 @@ export function Dashboard() {
           </div>
         )}
       </div>
+      <AppFooter />
     </div>
   );
 }

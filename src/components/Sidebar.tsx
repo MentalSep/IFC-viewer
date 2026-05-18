@@ -15,6 +15,7 @@ interface SidebarProps {
   loadedInfo: { name: string; size: string } | null;
   onFitCamera: () => void;
   onResetCamera: () => void;
+  onClearModel: () => void;
   elementTypes: ElementTypeInfo[];
   onElementTypeClick: (type: string) => void;
   loadTimeMs: number | null;
@@ -36,6 +37,7 @@ function Sidebar({
   loadedInfo,
   onFitCamera,
   onResetCamera,
+  onClearModel,
   elementTypes,
   onElementTypeClick,
   loadTimeMs,
@@ -138,6 +140,9 @@ function Sidebar({
           </button>
           <button className="button" onClick={onResetCamera} type="button">
             {copy.reset}
+          </button>
+          <button className="button" onClick={onClearModel} type="button">
+            {copy.clear}
           </button>
         </div>
 

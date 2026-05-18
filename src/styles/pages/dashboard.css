@@ -92,6 +92,16 @@
   font-family: inherit;
 }
 
+.join-role-select,
+.project-role-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: inherit;
+}
+
 .join-session-form input:focus {
   outline: none;
   border-color: var(--accent);
@@ -165,6 +175,12 @@
   background: var(--accent);
   color: #001014;
   font-weight: 700;
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #ffd5d5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .create-form-card {
@@ -320,8 +336,19 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.session-role {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .project-action .btn {
   width: 100%;
+}
+
+.project-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .empty-state {

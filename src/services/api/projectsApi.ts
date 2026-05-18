@@ -2,6 +2,7 @@ import {
   addDoc,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -9,6 +10,7 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  setDoc,
   Timestamp,
   Unsubscribe,
   updateDoc,
@@ -36,6 +38,28 @@ function fallbackSessionCode(projectId: string) {
   return projectId.slice(0, 8).toUpperCase();
 }
 
+export const PROJECT_ROLES = [
+  "Admin",
+  "Architect",
+  "Engineer",
+  "Planner",
+  "Contractor",
+  "Viewer",
+] as const;
+
+export type ProjectRole = (typeof PROJECT_ROLES)[number];
+
+export function isProjectRole(value: string): value is ProjectRole {
+  return (PROJECT_ROLES as readonly string[]).includes(value);
+}
+
+async function getCurrentUserRole(uid: string): Promise<string> {
+  const userRef = doc(firebaseDb, "users", uid);
+  const userSnapshot = await getDoc(userRef);
+  const role = (userSnapshot.data()?.role as string | undefined)?.trim();
+  return role || "Architect";
+}
+
 export interface ProjectRecord {
   id: string;
   name: string;
@@ -47,11 +71,16 @@ export interface ProjectRecord {
   documents: unknown[];
   sessionCode: string;
   memberCount: number;
+  currentUserRole: string;
 }
 
-function mapProject(projectDoc: { id: string; data: () => Record<string, unknown> }): ProjectRecord {
+function mapProject(
+  projectDoc: { id: string; data: () => Record<string, unknown> },
+  currentUid: string,
+): ProjectRecord {
   const data = projectDoc.data();
   const memberIds = (data.memberIds as string[] | undefined) ?? [];
+  const memberRoles = (data.memberRoles as Record<string, string> | undefined) ?? {};
   return {
     id: projectDoc.id,
     name: (data.name as string | undefined) ?? "Untitled Project",
@@ -64,6 +93,7 @@ function mapProject(projectDoc: { id: string; data: () => Record<string, unknown
     sessionCode:
       (data.sessionCode as string | undefined) ?? fallbackSessionCode(projectDoc.id),
     memberCount: memberIds.length,
+    currentUserRole: memberRoles[currentUid] ?? "Viewer",
   };
 }
 
@@ -73,7 +103,7 @@ export const projectsApi = {
     const q = query(collection(firebaseDb, "projects"), where("memberIds", "array-contains", uid));
     const snapshot = await getDocs(q);
     const projects = snapshot.docs
-      .map((projectDoc) => mapProject(projectDoc))
+      .map((projectDoc) => mapProject(projectDoc, uid))
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
     snapshot.docs.forEach((projectDoc) => {
@@ -109,7 +139,7 @@ export const projectsApi = {
         });
 
         const projects = snapshot.docs
-          .map((projectDoc) => mapProject(projectDoc))
+          .map((projectDoc) => mapProject(projectDoc, uid))
           .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
         onProjects(projects);
       },
@@ -122,19 +152,24 @@ export const projectsApi = {
   create: async (name: string, description?: string) => {
     const uid = requireUid();
     const sessionCode = generateSessionCode();
+    const profileRole = await getCurrentUserRole(uid);
+    const ownerRole: ProjectRole = isProjectRole(profileRole) ? profileRole : "Admin";
     const createdRef = await addDoc(collection(firebaseDb, "projects"), {
       name,
       description: description ?? "",
       ownerId: uid,
       status: "active",
       memberIds: [uid],
+      memberRoles: {
+        [uid]: ownerRole,
+      },
       sessionCode,
       documentsCount: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
     const created = await getDoc(createdRef);
-    return mapProject({ id: created.id, data: () => created.data() ?? {} });
+    return mapProject({ id: created.id, data: () => created.data() ?? {} }, uid);
   },
 
   get: async (projectId: string) => {
@@ -147,7 +182,7 @@ export const projectsApi = {
     const memberIds: string[] = (data.memberIds as string[] | undefined) ?? [];
     if (!memberIds.includes(uid)) throw new Error("Access denied");
 
-    return mapProject({ id: snapshot.id, data: () => data });
+    return mapProject({ id: snapshot.id, data: () => data }, uid);
   },
 
   update: async (projectId: string, data: Record<string, unknown>) => {
@@ -162,13 +197,16 @@ export const projectsApi = {
     return projectsApi.get(projectId);
   },
 
-  joinBySessionCode: async (sessionCode: string) => {
+  joinBySessionCode: async (sessionCode: string, invitedRole?: ProjectRole) => {
     const normalizedCode = sessionCode.trim().toUpperCase();
     if (!normalizedCode) {
       throw new Error("Session code is required");
     }
 
     const uid = requireUid();
+    const profileRole = await getCurrentUserRole(uid);
+    const assignedRole: ProjectRole =
+      invitedRole ?? (isProjectRole(profileRole) ? profileRole : "Viewer");
     const q = query(
       collection(firebaseDb, "projects"),
       where("sessionCode", "==", normalizedCode),
@@ -182,11 +220,32 @@ export const projectsApi = {
     const projectDoc = snapshot.docs[0];
     await updateDoc(projectDoc.ref, {
       memberIds: arrayUnion(uid),
+      [`memberRoles.${uid}`]: assignedRole,
       updatedAt: serverTimestamp(),
     });
 
+    await setDoc(
+      doc(firebaseDb, "users", uid),
+      { role: assignedRole, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+
     const refreshed = await getDoc(projectDoc.ref);
-    return mapProject({ id: refreshed.id, data: () => refreshed.data() ?? {} });
+    return mapProject({ id: refreshed.id, data: () => refreshed.data() ?? {} }, uid);
+  },
+
+  deleteById: async (projectId: string) => {
+    const uid = requireUid();
+    const userRole = await getCurrentUserRole(uid);
+    if (userRole.toLowerCase() !== "admin") {
+      throw new Error("Only admin can delete sessions");
+    }
+    const projectRef = doc(firebaseDb, "projects", projectId);
+    const snapshot = await getDoc(projectRef);
+    if (!snapshot.exists()) {
+      throw new Error("Project not found");
+    }
+    await deleteDoc(projectRef);
   },
 };
 

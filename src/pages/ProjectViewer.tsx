@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
 import { Navbar } from "../components/Navbar";
+import { AppFooter } from "../components/AppFooter";
 import IFCViewer, { type IFCViewerRef } from "../components/IFCViewer";
 import Sidebar from "../components/Sidebar";
 import Toolbar from "../components/Toolbar";
@@ -16,6 +17,11 @@ import ElementComments, {
   type ProfessionalRole,
 } from "../components/ElementComments";
 import DocumentBrowser from "../components/DocumentBrowser";
+import Planning4DPanel, {
+  PLAY_DIRECTIONS,
+  type PlanningTask,
+} from "../components/Planning4DPanel";
+import Cost5DPanel from "../components/Cost5DPanel";
 import {
   addDoc,
   collection,
@@ -37,7 +43,12 @@ import "../styles/pages/project-viewer.css";
 const LAST_PROJECT_KEY = "ifc_last_project_id";
 const PROJECT_SESSION_PREFIX = "ifc_project_session_";
 
-type RightPanelTab = "properties" | "comments" | "documents";
+type RightPanelTab =
+  | "properties"
+  | "comments"
+  | "documents"
+  | "planning"
+  | "costing";
 
 interface ProjectSessionState {
   theme: ViewerTheme;
@@ -71,10 +82,12 @@ export function ProjectViewer() {
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("properties");
+  const [isolatedType, setIsolatedType] = useState<string | null>(null);
   const [comments, setComments] = useState<ElementComment[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userRole, setUserRole] = useState<ProfessionalRole>("Architect");
   const loadStatusTimerRef = useRef<number | null>(null);
+  const viewerCanvasHostRef = useRef<HTMLDivElement | null>(null);
   const copy = useMemo(() => getViewerCopy(locale), [locale]);
 
   // Blank canvas - user uploads file
@@ -162,6 +175,27 @@ export function ProjectViewer() {
   const handleClipHeightChange = useCallback((ratio: number) => {
     ifcViewerRef.current?.setClipHeight(ratio);
   }, []);
+  const handleFocusSelected = useCallback(() => {
+    ifcViewerRef.current?.focusSelected();
+  }, []);
+  const handleHideSelected = useCallback(() => {
+    ifcViewerRef.current?.hideSelected();
+    setSelectedElement(null);
+  }, []);
+  const handleShowAllElements = useCallback(() => {
+    ifcViewerRef.current?.showAllElements();
+    setIsolatedType(null);
+  }, []);
+  const handleClearModel = useCallback(() => {
+    ifcViewerRef.current?.clearModel();
+    setLoadedFile(null);
+    setLoadedInfo(null);
+    setElementTypes([]);
+    setSelectedElement(null);
+    setLoadTimeMs(null);
+    setStatus(copy.shell.statusReady);
+    setIsolatedType(null);
+  }, [copy.shell.statusReady]);
   const handleToggleTheme = useCallback(() => {
     setTheme((prevTheme) => {
       const newTheme =
@@ -176,8 +210,16 @@ export function ProjectViewer() {
   }, [cycleLocale]);
 
   const handleElementTypeClick = useCallback((type: string) => {
-    // Filter or highlight elements of this type
-  }, []);
+    if (isolatedType === type) {
+      ifcViewerRef.current?.clearTypeIsolation();
+      setIsolatedType(null);
+      setStatus(copy.shell.statusLoaded);
+      return;
+    }
+    const visibleCount = ifcViewerRef.current?.isolateElementType(type) ?? 0;
+    setIsolatedType(type);
+    setStatus(`${type} (${visibleCount})`);
+  }, [copy.shell.statusLoaded, isolatedType]);
 
   // Ensure viewer resizes when sidebars open/close
   useEffect(() => {
@@ -226,7 +268,9 @@ export function ProjectViewer() {
       if (
         parsed.rightPanelTab === "properties" ||
         parsed.rightPanelTab === "comments" ||
-        parsed.rightPanelTab === "documents"
+        parsed.rightPanelTab === "documents" ||
+        parsed.rightPanelTab === "planning" ||
+        parsed.rightPanelTab === "costing"
       ) {
         setRightPanelTab(parsed.rightPanelTab);
       }
@@ -348,6 +392,27 @@ export function ProjectViewer() {
     [projectId],
   );
 
+  const handlePlanningStep = useCallback(
+    (task: PlanningTask, index: number) => {
+      const direction = PLAY_DIRECTIONS[index % PLAY_DIRECTIONS.length];
+      ifcViewerRef.current?.setViewAngle(direction);
+      setStatus(`${copy.shell.statusLoaded} • ${task.name}`);
+    },
+    [copy.shell.statusLoaded],
+  );
+
+  const handleSetElementProgress = useCallback((expressId: number, progress: number) => {
+    return ifcViewerRef.current?.setElementProgress(expressId, progress) ?? false;
+  }, []);
+  const handleGetQuantitySummary = useCallback(
+    () => ifcViewerRef.current?.getQuantitySummary() ?? [],
+    [],
+  );
+  const handleGetElementQuantity = useCallback(
+    (expressId: number) => ifcViewerRef.current?.getElementQuantity(expressId) ?? null,
+    [],
+  );
+
   return (
     <div className="project-viewer-page" data-theme={theme} data-locale={locale}>
       <Navbar
@@ -401,6 +466,7 @@ export function ProjectViewer() {
               loadedInfo={loadedInfo}
               onFitCamera={handleFitCamera}
               onResetCamera={handleResetCamera}
+              onClearModel={handleClearModel}
               elementTypes={elementTypes}
               onElementTypeClick={handleElementTypeClick}
               loadTimeMs={loadTimeMs}
@@ -443,6 +509,9 @@ export function ProjectViewer() {
               onClearMeasurements={handleClearMeasurements}
               onToggleClipping={handleToggleClipping}
               onClipHeightChange={handleClipHeightChange}
+              onFocusSelected={handleFocusSelected}
+              onHideSelected={handleHideSelected}
+              onShowAllElements={handleShowAllElements}
               onShowShortcuts={() => setShowShortcuts(true)}
               copy={copy.toolbar}
             />
@@ -452,20 +521,22 @@ export function ProjectViewer() {
           <div className="project-viewer-row">
             {/* 3D Viewer */}
             <div className="project-viewer-canvas">
-              <IFCViewer
-                ref={ifcViewerRef}
-                file={loadedFile}
-                onLoad={handleViewerLoad}
-                onError={handleViewerError}
-                onElementTypesReady={handleElementTypesReady}
-                onElementSelected={handleElementSelected}
-                theme={theme}
-              />
-              <ViewCube
-                onSetView={(direction) =>
-                  ifcViewerRef.current?.setViewAngle(direction)
-                }
-              />
+              <div ref={viewerCanvasHostRef} className="project-viewer-canvas-host">
+                <IFCViewer
+                  ref={ifcViewerRef}
+                  file={loadedFile}
+                  onLoad={handleViewerLoad}
+                  onError={handleViewerError}
+                  onElementTypesReady={handleElementTypesReady}
+                  onElementSelected={handleElementSelected}
+                  theme={theme}
+                />
+                <ViewCube
+                  onSetView={(direction) =>
+                    ifcViewerRef.current?.setViewAngle(direction)
+                  }
+                />
+              </div>
 
               {/* Toggle Right Sidebar Button */}
               {!showRightSidebar && (
@@ -505,6 +576,20 @@ export function ProjectViewer() {
                     >
                       {copy.layout.tabDocuments}
                     </button>
+                    <button
+                      className={`tab-btn ${rightPanelTab === "planning" ? "active" : ""}`}
+                      onClick={() => setRightPanelTab("planning")}
+                      title={copy.layout.tabPlanning}
+                    >
+                      {copy.layout.tabPlanning}
+                    </button>
+                    <button
+                      className={`tab-btn ${rightPanelTab === "costing" ? "active" : ""}`}
+                      onClick={() => setRightPanelTab("costing")}
+                      title={copy.layout.tabCosting}
+                    >
+                      {copy.layout.tabCosting}
+                    </button>
                   </div>
                   <button
                     onClick={() => setShowRightSidebar(false)}
@@ -529,18 +614,53 @@ export function ProjectViewer() {
                     )
                   ) : rightPanelTab === "comments" ? (
                     <ElementComments
-                      selectedExpressId={selectedElement?.expressId ?? null}
+                      selectedExpressId={
+                        selectedElement && selectedElement.expressId > 0
+                          ? selectedElement.expressId
+                          : null
+                      }
                       selectedElementType={selectedElement?.type ?? null}
                       comments={comments}
                       onAddComment={handleAddComment}
                       userName={user?.name ?? "Guest"}
                       userRole={userRole}
                     />
-                    ) : projectId ? (
+                    ) : rightPanelTab === "documents" ? (
+                      projectId ? (
                       <DocumentBrowser
                         projectId={projectId}
                         onSelectDocument={handleFileSelected}
                         copy={copy.documents}
+                      />
+                      ) : (
+                        <div className="project-empty-properties">
+                          {copy.layout.projectUnavailable}
+                        </div>
+                      )
+                    ) : rightPanelTab === "planning" ? (
+                      projectId ? (
+                      <Planning4DPanel
+                        projectId={projectId}
+                        selectedElement={selectedElement}
+                        copy={copy.planning}
+                        onStepChange={handlePlanningStep}
+                        getViewerCanvas={() =>
+                          viewerCanvasHostRef.current?.querySelector("canvas") ?? null
+                        }
+                      />
+                      ) : (
+                        <div className="project-empty-properties">
+                          {copy.layout.projectUnavailable}
+                        </div>
+                      )
+                    ) : projectId ? (
+                      <Cost5DPanel
+                        projectId={projectId}
+                        selectedElement={selectedElement}
+                        copy={copy.costing}
+                        getQuantitySummary={handleGetQuantitySummary}
+                        getElementQuantity={handleGetElementQuantity}
+                        setElementProgress={handleSetElementProgress}
                       />
                     ) : (
                       <div className="project-empty-properties">
@@ -569,6 +689,7 @@ export function ProjectViewer() {
         open={showShortcuts}
         onClose={() => setShowShortcuts(false)}
       />
+      <AppFooter />
     </div>
   );
 }

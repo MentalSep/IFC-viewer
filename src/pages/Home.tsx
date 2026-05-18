@@ -2,8 +2,13 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
 import { Navbar } from "../components/Navbar";
+import { AppFooter } from "../components/AppFooter";
 import { useAppLanguage } from "../components/AppLanguage";
 import { useAuthStore } from "../services/state/useAuthStore";
+import {
+  PROJECT_ROLES,
+  type ProjectRole,
+} from "../services/api/projectsApi";
 import "../styles/pages/home.css";
 
 function normalizeSessionCode(value: string) {
@@ -14,6 +19,7 @@ export function Home() {
   const { user } = useAuthStore();
   const { copy } = useAppLanguage();
   const [sessionCode, setSessionCode] = useState("");
+  const [inviteRole, setInviteRole] = useState<ProjectRole>("Viewer");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
   const inviteMessage = useMemo(() => {
@@ -23,9 +29,14 @@ export function Home() {
     return code
       ? copy.home.inviteMessageWithCode
           .replace("{{code}}", code)
-          .replace("{{url}}", dashboardUrl)
+          .replace("{{url}}", `${dashboardUrl}?session=${code}&role=${encodeURIComponent(inviteRole)}`)
       : copy.home.inviteMessageWithoutCode.replace("{{url}}", dashboardUrl);
-  }, [copy.home.inviteMessageWithCode, copy.home.inviteMessageWithoutCode, sessionCode]);
+  }, [
+    copy.home.inviteMessageWithCode,
+    copy.home.inviteMessageWithoutCode,
+    inviteRole,
+    sessionCode,
+  ]);
 
   const whatsappUrl = useMemo(() => {
     return `https://wa.me/?text=${encodeURIComponent(inviteMessage)}`;
@@ -34,8 +45,10 @@ export function Home() {
   const inviteLink = useMemo(() => {
     const code = normalizeSessionCode(sessionCode);
     const baseUrl = window.location.origin;
-    return code ? `${baseUrl}/dashboard?session=${code}` : `${baseUrl}/dashboard`;
-  }, [sessionCode]);
+    return code
+      ? `${baseUrl}/dashboard?session=${code}&role=${encodeURIComponent(inviteRole)}`
+      : `${baseUrl}/dashboard`;
+  }, [inviteRole, sessionCode]);
 
   const handleGenerateCode = (e: FormEvent) => {
     e.preventDefault();
@@ -93,6 +106,21 @@ export function Home() {
               placeholder={copy.home.sessionCodePlaceholder}
               maxLength={12}
             />
+            <label htmlFor="inviteRole" className="home-field-label">
+              {copy.home.roleLabel}
+            </label>
+            <select
+              id="inviteRole"
+              className="home-session-input"
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as ProjectRole)}
+            >
+              {PROJECT_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
             <div className="home-invite-actions">
               <button className="home-btn home-btn-primary" type="submit">
                 {copy.home.normalizeCode}
@@ -144,6 +172,7 @@ export function Home() {
           </div>
         </div>
       </section>
+      <AppFooter />
     </div>
   );
 }

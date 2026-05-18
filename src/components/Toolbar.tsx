@@ -14,6 +14,9 @@ interface ToolbarProps {
   onToggleClipping: () => void;
   onClipHeightChange: (ratio: number) => void;
   onShowShortcuts: () => void;
+  onFocusSelected: () => void;
+  onHideSelected: () => void;
+  onShowAllElements: () => void;
   copy: ViewerCopy["toolbar"];
 }
 
@@ -29,6 +32,9 @@ function Toolbar({
   onToggleClipping,
   onClipHeightChange,
   onShowShortcuts,
+  onFocusSelected,
+  onHideSelected,
+  onShowAllElements,
   copy,
 }: ToolbarProps) {
   // Local state for button display - doesn't trigger parent re-renders
@@ -158,6 +164,25 @@ function Toolbar({
           <Icon name="zoomOut" />
         </span>
         <span className="toolbar-label">{copy.zoomOut}</span>
+      </button>
+      <div className="toolbar-divider" />
+      <button className="toolbar-btn" onClick={onFocusSelected} title={copy.focus}>
+        <span className="toolbar-icon">
+          <Icon name="eye" />
+        </span>
+        <span className="toolbar-label">{copy.focus}</span>
+      </button>
+      <button className="toolbar-btn" onClick={onHideSelected} title={copy.hide}>
+        <span className="toolbar-icon">
+          <Icon name="close" />
+        </span>
+        <span className="toolbar-label">{copy.hide}</span>
+      </button>
+      <button className="toolbar-btn" onClick={onShowAllElements} title={copy.showAll}>
+        <span className="toolbar-icon">
+          <Icon name="grid" />
+        </span>
+        <span className="toolbar-label">{copy.showAll}</span>
       </button>
       <div className="toolbar-divider" />
       <button

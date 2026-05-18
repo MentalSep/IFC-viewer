@@ -28,6 +28,16 @@ interface IFCViewerProps {
   theme?: ViewerTheme;
 }
 
+export interface ElementQuantityData {
+  expressId: number;
+  type: string;
+  count: number;
+  area: number;
+  volume: number;
+  length: number;
+  perimeter: number;
+}
+
 export interface IFCViewerRef {
   fitCamera: () => void;
   resetCamera: () => void;
@@ -42,6 +52,16 @@ export interface IFCViewerRef {
   clearMeasurements: () => void;
   toggleClipping: () => boolean;
   setClipHeight: (ratio: number) => void;
+  focusSelected: () => boolean;
+  hideSelected: () => boolean;
+  showAllElements: () => void;
+  isolateElementType: (type: string) => number;
+  clearTypeIsolation: () => void;
+  clearModel: () => void;
+  setElementProgress: (expressId: number, progress: number) => boolean;
+  getQuantitySummary: () => ElementQuantityData[];
+  getElementQuantity: (expressId: number) => ElementQuantityData | null;
+  getLoadedFileName: () => string | null;
   resize: () => void;
 }
 
@@ -104,6 +124,82 @@ function disposeObject3D(object: THREE.Object3D) {
   });
 }
 
+function getAllMeshes(root: THREE.Object3D | null): THREE.Mesh[] {
+  if (!root) return [];
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      meshes.push(child);
+    }
+  });
+  return meshes;
+}
+
+function estimateSelectionMetrics(mesh: THREE.Mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute("position");
+  const index = geometry.getIndex();
+  let triangles = 0;
+
+  if (index) {
+    triangles = Math.floor(index.count / 3);
+  } else if (position) {
+    triangles = Math.floor(position.count / 3);
+  }
+
+  return {
+    dimensions: {
+      x: Number(size.x.toFixed(3)),
+      y: Number(size.y.toFixed(3)),
+      z: Number(size.z.toFixed(3)),
+    },
+    center: {
+      x: Number(center.x.toFixed(3)),
+      y: Number(center.y.toFixed(3)),
+      z: Number(center.z.toFixed(3)),
+    },
+    triangles,
+  };
+}
+
+function extractNumericValues(source: unknown): number[] {
+  if (source === null || source === undefined) return [];
+  if (typeof source === "number" && Number.isFinite(source)) return [source];
+  if (typeof source === "string") {
+    const parsed = Number(source);
+    return Number.isFinite(parsed) ? [parsed] : [];
+  }
+  if (typeof source === "object") {
+    const values: number[] = [];
+    Object.values(source as Record<string, unknown>).forEach((value) => {
+      values.push(...extractNumericValues(value));
+    });
+    return values;
+  }
+  return [];
+}
+
+function extractQuantitiesFromIfcLine(line: Record<string, unknown>) {
+  let area = 0;
+  let volume = 0;
+  let length = 0;
+  let perimeter = 0;
+  Object.entries(line).forEach(([key, value]) => {
+    const upper = key.toUpperCase();
+    const nums = extractNumericValues(value);
+    if (nums.length === 0) return;
+    const sum = nums.reduce((acc, curr) => acc + curr, 0);
+    if (upper.includes("AREA")) area += sum;
+    else if (upper.includes("VOLUME")) volume += sum;
+    else if (upper.includes("LENGTH")) length += sum;
+    else if (upper.includes("PERIMETER")) perimeter += sum;
+  });
+  return { area, volume, length, perimeter };
+}
+
 const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
   (
     { file, onLoad, onError, onElementTypesReady, onElementSelected, theme },
@@ -154,8 +250,10 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
     >(new Map());
     // Store element type info per expressID for property lookup
     const elementDataRef = useRef<
-      Map<number, { type: string; expressId: number }>
+      Map<number, ElementQuantityData>
     >(new Map());
+    const elementMeshesRef = useRef<Map<number, THREE.Mesh[]>>(new Map());
+    const loadedFileNameRef = useRef<string | null>(null);
     // Store model ID for property queries
     const currentModelIdRef = useRef<number | null>(null);
     // Measurement state
@@ -172,6 +270,20 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       minY: 0,
       maxY: 100,
     });
+    const selectedMeshRef = useRef<THREE.Mesh | null>(null);
+    const selectedOriginalMaterialRef = useRef<
+      THREE.Material | THREE.Material[] | null
+    >(null);
+    const hiddenMeshesRef = useRef<Set<THREE.Mesh>>(new Set());
+    const isolatedTypeRef = useRef<string | null>(null);
+
+    const clearSelectionHighlight = useCallback(() => {
+      if (selectedMeshRef.current && selectedOriginalMaterialRef.current) {
+        selectedMeshRef.current.material = selectedOriginalMaterialRef.current;
+      }
+      selectedMeshRef.current = null;
+      selectedOriginalMaterialRef.current = null;
+    }, []);
 
     // Fit camera to model
     const fitCamera = useCallback(() => {
@@ -302,8 +414,6 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       // Click handler for selection
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
-      let highlightedMesh: THREE.Mesh | null = null;
-      let originalMaterial: THREE.Material | THREE.Material[] | null = null;
 
       const handleClick = (event: MouseEvent) => {
         if (!containerRef.current || !modelRef.current) return;
@@ -365,16 +475,12 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
         }
 
         // Reset previous highlight
-        if (highlightedMesh && originalMaterial) {
-          highlightedMesh.material = originalMaterial;
-          highlightedMesh = null;
-          originalMaterial = null;
-        }
+        clearSelectionHighlight();
 
         if (intersects.length > 0) {
           const mesh = intersects[0].object as THREE.Mesh;
-          originalMaterial = mesh.material;
-          highlightedMesh = mesh;
+          selectedOriginalMaterialRef.current = mesh.material;
+          selectedMeshRef.current = mesh;
           mesh.material = new THREE.MeshStandardMaterial({
             color: 0x00d8a4,
             emissive: 0x00d8a4,
@@ -403,14 +509,28 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
               expressId: elData.expressId,
               type: elData.type,
               properties: props,
+              metrics: estimateSelectionMetrics(mesh),
             });
           } else {
-            setSelectedInfo("Selected element");
-            onElementSelected(null);
+            const fallbackType =
+              (mesh.userData as { ifcType?: string }).ifcType ??
+              mesh.name ??
+              "Mesh";
+            setSelectedInfo(`${fallbackType}`);
+            onElementSelected({
+              expressId: -1,
+              type: fallbackType,
+              properties: [
+                { name: "Object Name", value: mesh.name || "N/A" },
+                { name: "Geometry Type", value: mesh.geometry.type },
+              ],
+              metrics: estimateSelectionMetrics(mesh),
+            });
           }
           needsRenderRef.current = true;
         } else {
           setSelectedInfo(null);
+          clearSelectionHighlight();
           onElementSelected(null);
         }
       };
@@ -429,13 +549,14 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
         if (containerRef.current) {
           containerRef.current.removeEventListener("click", handleClick);
         }
+        clearSelectionHighlight();
         if (animationIdRef.current) {
           cancelAnimationFrame(animationIdRef.current);
         }
         renderer.dispose();
         controls.dispose();
       };
-    }, [resizeRenderer]);
+    }, [clearSelectionHighlight, resizeRenderer]);
 
     // Convert IFC geometry to Three.js mesh - individual meshes for selection
     const createMeshFromIFC = useCallback(
@@ -453,10 +574,16 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
           // Try to determine the IFC type for this element
           let ifcType = "Unknown";
+          let quantities = { area: 0, volume: 0, length: 0, perimeter: 0 };
           try {
             const lineData = ifcApi.GetLine(modelID, expressID);
             if (lineData && lineData.constructor && lineData.constructor.name) {
               ifcType = lineData.constructor.name;
+            }
+            if (lineData && typeof lineData === "object") {
+              quantities = extractQuantitiesFromIfcLine(
+                lineData as Record<string, unknown>,
+              );
             }
           } catch {
             // fallback – type stays Unknown
@@ -469,6 +596,11 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           elementDataRef.current.set(expressID, {
             type: ifcType,
             expressId: expressID,
+            count: 1,
+            area: quantities.area,
+            volume: quantities.volume,
+            length: quantities.length,
+            perimeter: quantities.perimeter,
           });
 
           for (let i = 0; i < placedGeometries.size(); i++) {
@@ -536,8 +668,11 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
             const threeJsMesh = new THREE.Mesh(bufferGeometry, material);
 
-            // Store express ID for property lookup on click
-            threeJsMesh.userData = { expressId: expressID };
+            // Store lookup metadata for selection interactions
+            threeJsMesh.userData = { expressId: expressID, ifcType };
+            const meshList = elementMeshesRef.current.get(expressID) ?? [];
+            meshList.push(threeJsMesh);
+            elementMeshesRef.current.set(expressID, meshList);
 
             // Apply transformation matrix
             const matrix = new THREE.Matrix4();
@@ -567,7 +702,13 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
         setIsLoading(true);
         elementDataRef.current.clear();
+        elementMeshesRef.current.clear();
         originalMaterialsRef.current.clear();
+        hiddenMeshesRef.current.clear();
+        isolatedTypeRef.current = null;
+        clearSelectionHighlight();
+        setSelectedInfo(null);
+        onElementSelected(null);
 
         try {
           // Remove existing model and dispose its resources
@@ -637,13 +778,22 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           setIsLoading(false);
         }
       },
-      [createMeshFromIFC, fitCamera, onLoad, onError, onElementTypesReady],
+      [
+        clearSelectionHighlight,
+        createMeshFromIFC,
+        fitCamera,
+        onElementSelected,
+        onLoad,
+        onError,
+        onElementTypesReady,
+      ],
     );
 
     // Load from File
     const loadIFCFromFile = useCallback(
       async (file: File) => {
         try {
+          loadedFileNameRef.current = file.name;
           const buffer = await file.arrayBuffer();
           await loadIFCData(new Uint8Array(buffer));
         } catch (err) {
@@ -659,9 +809,15 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
         const scene = sceneRef.current;
         if (!scene) return;
 
+        loadedFileNameRef.current = file.name;
         setIsLoading(true);
         elementDataRef.current.clear();
+        elementMeshesRef.current.clear();
         originalMaterialsRef.current.clear();
+        hiddenMeshesRef.current.clear();
+        isolatedTypeRef.current = null;
+        clearSelectionHighlight();
+        setSelectedInfo(null);
         onElementTypesReady([]);
         onElementSelected(null);
 
@@ -750,6 +906,17 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
 
           modelRef.current = group;
           scene.add(group);
+          const meshes = getAllMeshes(group);
+          const byType: ElementQuantityData = {
+            expressId: -1,
+            type: "GENERIC_MESH",
+            count: meshes.length,
+            area: 0,
+            volume: 0,
+            length: 0,
+            perimeter: 0,
+          };
+          elementDataRef.current.set(-1, byType);
 
           needsRenderRef.current = true;
           onLoad();
@@ -761,7 +928,14 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           setIsLoading(false);
         }
       },
-      [fitCamera, onElementSelected, onElementTypesReady, onLoad, onError],
+      [
+        clearSelectionHighlight,
+        fitCamera,
+        onElementSelected,
+        onElementTypesReady,
+        onLoad,
+        onError,
+      ],
     );
 
     // Reset camera
@@ -1002,6 +1176,146 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       needsRenderRef.current = true;
     }, []);
 
+    const focusSelected = useCallback((): boolean => {
+      const mesh = selectedMeshRef.current;
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      if (!mesh || !camera || !controls) return false;
+      const box = new THREE.Box3().setFromObject(mesh);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const distance = Math.max(size.x, size.y, size.z) * 2 || 10;
+      camera.position.set(center.x + distance, center.y + distance * 0.7, center.z + distance);
+      controls.target.copy(center);
+      controls.update();
+      needsRenderRef.current = true;
+      return true;
+    }, []);
+
+    const hideSelected = useCallback((): boolean => {
+      const mesh = selectedMeshRef.current;
+      if (!mesh) return false;
+      mesh.visible = false;
+      hiddenMeshesRef.current.add(mesh);
+      clearSelectionHighlight();
+      setSelectedInfo(null);
+      onElementSelected(null);
+      needsRenderRef.current = true;
+      return true;
+    }, [clearSelectionHighlight, onElementSelected]);
+
+    const showAllElements = useCallback(() => {
+      getAllMeshes(modelRef.current).forEach((mesh) => {
+        mesh.visible = true;
+      });
+      hiddenMeshesRef.current.clear();
+      isolatedTypeRef.current = null;
+      needsRenderRef.current = true;
+    }, []);
+
+    const isolateElementType = useCallback((type: string): number => {
+      const targetType = type.toUpperCase();
+      let visibleCount = 0;
+      getAllMeshes(modelRef.current).forEach((mesh) => {
+        const meshType = ((mesh.userData as { ifcType?: string }).ifcType ?? "").toUpperCase();
+        const shouldShow = meshType === targetType;
+        mesh.visible = shouldShow;
+        if (shouldShow) visibleCount += 1;
+      });
+      isolatedTypeRef.current = targetType;
+      hiddenMeshesRef.current.clear();
+      needsRenderRef.current = true;
+      return visibleCount;
+    }, []);
+
+    const clearTypeIsolation = useCallback(() => {
+      if (!isolatedTypeRef.current) return;
+      getAllMeshes(modelRef.current).forEach((mesh) => {
+        mesh.visible = true;
+      });
+      isolatedTypeRef.current = null;
+      hiddenMeshesRef.current.clear();
+      needsRenderRef.current = true;
+    }, []);
+
+    const clearModel = useCallback(() => {
+      const scene = sceneRef.current;
+      if (!scene) return;
+      clearSelectionHighlight();
+      clearMeasurements();
+      setSelectedInfo(null);
+      onElementSelected(null);
+      onElementTypesReady([]);
+      elementDataRef.current.clear();
+      elementMeshesRef.current.clear();
+      originalMaterialsRef.current.clear();
+      hiddenMeshesRef.current.clear();
+      isolatedTypeRef.current = null;
+      loadedFileNameRef.current = null;
+
+      if (modelRef.current) {
+        disposeObject3D(modelRef.current);
+        scene.remove(modelRef.current);
+        modelRef.current = null;
+      }
+      if (currentModelIdRef.current !== null && ifcApiRef.current) {
+        try {
+          ifcApiRef.current.CloseModel(currentModelIdRef.current);
+        } catch {
+          // ignore close model failures
+        }
+        currentModelIdRef.current = null;
+      }
+      needsRenderRef.current = true;
+    }, [clearMeasurements, clearSelectionHighlight, onElementSelected, onElementTypesReady]);
+
+    const setElementProgress = useCallback((expressId: number, progress: number): boolean => {
+      const meshes = elementMeshesRef.current.get(expressId);
+      if (!meshes || meshes.length === 0) return false;
+      const clamped = Math.max(0, Math.min(100, progress));
+      const t = clamped / 100;
+      const tint = new THREE.Color(0xef4444).lerp(new THREE.Color(0x22c55e), t);
+      meshes.forEach((mesh) => {
+        const mat = mesh.material;
+        if (mat instanceof THREE.MeshStandardMaterial) {
+          const base =
+            (mesh.userData as { progressBaseColor?: THREE.Color }).progressBaseColor ??
+            mat.color.clone();
+          if (!(mesh.userData as { progressBaseColor?: THREE.Color }).progressBaseColor) {
+            (mesh.userData as { progressBaseColor?: THREE.Color }).progressBaseColor = base;
+          }
+          mat.color.copy(base).lerp(tint, 0.65);
+          mat.emissive.copy(tint).multiplyScalar(0.15);
+          mat.needsUpdate = true;
+        }
+      });
+      needsRenderRef.current = true;
+      return true;
+    }, []);
+
+    const getQuantitySummary = useCallback((): ElementQuantityData[] => {
+      const grouped = new Map<string, ElementQuantityData>();
+      Array.from(elementDataRef.current.values()).forEach((item) => {
+        const existing = grouped.get(item.type);
+        if (!existing) {
+          grouped.set(item.type, { ...item });
+          return;
+        }
+        existing.count += item.count;
+        existing.area += item.area;
+        existing.volume += item.volume;
+        existing.length += item.length;
+        existing.perimeter += item.perimeter;
+      });
+      return Array.from(grouped.values()).sort((a, b) => b.count - a.count);
+    }, []);
+
+    const getElementQuantity = useCallback(
+      (expressId: number): ElementQuantityData | null =>
+        elementDataRef.current.get(expressId) ?? null,
+      [],
+    );
+
     useImperativeHandle(ref, () => ({
       fitCamera,
       resetCamera,
@@ -1016,6 +1330,16 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       clearMeasurements,
       toggleClipping,
       setClipHeight,
+      focusSelected,
+      hideSelected,
+      showAllElements,
+      isolateElementType,
+      clearTypeIsolation,
+      clearModel,
+      setElementProgress,
+      getQuantitySummary,
+      getElementQuantity,
+      getLoadedFileName: () => loadedFileNameRef.current,
       resize: resizeRenderer,
     }));
 

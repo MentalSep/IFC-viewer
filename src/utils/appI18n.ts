@@ -34,6 +34,7 @@ export interface AppCopy {
     normalizeCode: string;
     copyInvite: string;
     whatsapp: string;
+    roleLabel: string;
     inviteCopied: string;
     inviteCopyFailed: string;
     inviteLink: string;
@@ -53,6 +54,7 @@ export interface AppCopy {
     joinTitle: string;
     joinSubtitle: string;
     joinPlaceholder: string;
+    roleLabel: string;
     joining: string;
     joinSession: string;
     createTitle: string;
@@ -72,7 +74,14 @@ export interface AppCopy {
     noDescription: string;
     openProject: string;
     sessionPrefix: string;
+    yourRolePrefix: string;
     sessionNotGenerated: string;
+    inviteRoleLabel: string;
+    whatsappInvite: string;
+    whatsappInviteText: string;
+    deleteSession: string;
+    deleteConfirm: string;
+    deleteFailed: string;
     documentsOne: string;
     documentsMany: string;
     collaboratorOne: string;
@@ -131,6 +140,12 @@ export interface AppCopy {
     close: string;
     expressId: string;
     noProperties: string;
+    dimensions: string;
+    center: string;
+    triangles: string;
+    propertiesCount: string;
+    search: string;
+    copyJson: string;
   };
   shortcuts: {
     title: string;
@@ -145,6 +160,10 @@ export interface AppCopy {
     left: string;
     bottom: string;
     iso: string;
+  };
+  footer: {
+    product: string;
+    rights: string;
   };
 }
 
@@ -179,6 +198,7 @@ const EN: AppCopy = {
     normalizeCode: "Normalize code",
     copyInvite: "Copy invite",
     whatsapp: "WhatsApp",
+    roleLabel: "Invite role",
     inviteCopied: "Invite copied.",
     inviteCopyFailed: "Copy failed.",
     inviteLink: "Invite link",
@@ -200,6 +220,7 @@ const EN: AppCopy = {
     joinTitle: "Join Collaboration Session",
     joinSubtitle: "Enter a project session code to join a shared group workspace.",
     joinPlaceholder: "e.g. K3P8N6Q2",
+    roleLabel: "Role",
     joining: "Joining...",
     joinSession: "Join Session",
     createTitle: "Create New Project",
@@ -219,7 +240,14 @@ const EN: AppCopy = {
     noDescription: "No description",
     openProject: "Open Project",
     sessionPrefix: "Session",
+    yourRolePrefix: "Your role",
     sessionNotGenerated: "Not generated yet",
+    inviteRoleLabel: "Invite role",
+    whatsappInvite: "WhatsApp invite",
+    whatsappInviteText: "Join this CoBIM Cloud session",
+    deleteSession: "Delete Session",
+    deleteConfirm: "Delete this session? This cannot be undone.",
+    deleteFailed: "Unable to delete session",
     documentsOne: "document",
     documentsMany: "documents",
     collaboratorOne: "collaborator",
@@ -278,6 +306,12 @@ const EN: AppCopy = {
     close: "Close",
     expressId: "Express ID",
     noProperties: "No properties available",
+    dimensions: "Dimensions",
+    center: "Center",
+    triangles: "Triangles",
+    propertiesCount: "Properties",
+    search: "Search properties...",
+    copyJson: "Copy JSON",
   },
   shortcuts: {
     title: "Keyboard Shortcuts",
@@ -292,6 +326,10 @@ const EN: AppCopy = {
     left: "Left",
     bottom: "Bottom",
     iso: "Isometric",
+  },
+  footer: {
+    product: "CoBIM Cloud · BIM Collaboration",
+    rights: "All rights reserved.",
   },
 };
 
@@ -427,6 +465,12 @@ const FR: AppCopy = {
     close: "Fermer",
     expressId: "ID Express",
     noProperties: "Aucune propriété disponible",
+    dimensions: "Dimensions",
+    center: "Centre",
+    triangles: "Triangles",
+    propertiesCount: "Propriétés",
+    search: "Rechercher des propriétés...",
+    copyJson: "Copier JSON",
   },
   shortcuts: {
     title: "Raccourcis clavier",
@@ -577,6 +621,12 @@ const DE: AppCopy = {
     close: "Schließen",
     expressId: "Express-ID",
     noProperties: "Keine Eigenschaften verfügbar",
+    dimensions: "Abmessungen",
+    center: "Zentrum",
+    triangles: "Dreiecke",
+    propertiesCount: "Eigenschaften",
+    search: "Eigenschaften suchen...",
+    copyJson: "JSON kopieren",
   },
   shortcuts: {
     title: "Tastenkürzel",
@@ -724,6 +774,12 @@ const AR: AppCopy = {
     close: "إغلاق",
     expressId: "معرّف Express",
     noProperties: "لا توجد خصائص متاحة",
+    dimensions: "الأبعاد",
+    center: "المركز",
+    triangles: "المثلثات",
+    propertiesCount: "الخصائص",
+    search: "ابحث في الخصائص...",
+    copyJson: "نسخ JSON",
   },
   shortcuts: {
     title: "اختصارات لوحة المفاتيح",

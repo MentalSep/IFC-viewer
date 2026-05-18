@@ -24,6 +24,8 @@ export interface ViewerCopy {
     tabProperties: string;
     tabComments: string;
     tabDocuments: string;
+    tabPlanning: string;
+    tabCosting: string;
     selectElement: string;
     projectUnavailable: string;
   };
@@ -34,6 +36,7 @@ export interface ViewerCopy {
     uploadHint: string;
     fitView: string;
     reset: string;
+    clear: string;
     searchPlaceholder: string;
     modelInfo: string;
     elements: string;
@@ -53,6 +56,9 @@ export interface ViewerCopy {
     zoomOut: string;
     screenshot: string;
     shortcuts: string;
+    focus: string;
+    hide: string;
+    showAll: string;
   };
   documents: {
     title: string;
@@ -68,6 +74,87 @@ export interface ViewerCopy {
     uploadError: string;
     downloadError: string;
     previewError: string;
+  };
+  planning: {
+    importTitle: string;
+    importSubtitle: string;
+    importButton: string;
+    importFailed: string;
+    importFirst: string;
+    tasksImported: string;
+    noTasksFound: string;
+    linkingTitle: string;
+    linkingSubtitle: string;
+    selectTask: string;
+    linkButton: string;
+    unlinkButton: string;
+    selectedElement: string;
+    noElementSelected: string;
+    noLinks: string;
+    playerTitle: string;
+    playerSubtitle: string;
+    play: string;
+    pause: string;
+    exportMp4: string;
+    exporting: string;
+    exportReadyMp4: string;
+    exportReadyWebm: string;
+    viewerUnavailable: string;
+    recorderUnavailable: string;
+    stepDuration: string;
+    currentTask: string;
+    predictiveTitle: string;
+    predictiveSubtitle: string;
+    noIssues: string;
+    issueMissingDates: string;
+    issueInvalidRange: string;
+    issueUnknownPredecessor: string;
+    issueUnlinkedTask: string;
+    issueOverlap: string;
+  };
+  costing: {
+    title: string;
+    subtitle: string;
+    importBpu: string;
+    importLandXml: string;
+    importFailed: string;
+    libraries: string;
+    noLibraries: string;
+    baseCurrency: string;
+    threshold: string;
+    quantityAuto: string;
+    noQuantities: string;
+    linkBpu: string;
+    noLink: string;
+    budgetEstimated: string;
+    budgetModel: string;
+    variance: string;
+    varianceAlert: string;
+    liveDashboard: string;
+    progressTitle: string;
+    selectedPiece: string;
+    noSelection: string;
+    progress: string;
+    applyProgress: string;
+    validate: string;
+    generatePdf: string;
+    generateXls: string;
+    generated: string;
+    disciplineTitle: string;
+    building: string;
+    structure: string;
+    infra: string;
+    art: string;
+    landXmlMetrics: string;
+    cutVolume: string;
+    fillVolume: string;
+    networkLength: string;
+    roadArea: string;
+    quantityCount: string;
+    quantityArea: string;
+    quantityVolume: string;
+    quantityLength: string;
+    quantityPerimeter: string;
   };
 }
 
@@ -92,6 +179,8 @@ const EN: ViewerCopy = {
     tabProperties: "Properties",
     tabComments: "Comments",
     tabDocuments: "Documents",
+    tabPlanning: "4D Planning",
+    tabCosting: "5D Costs",
     selectElement: "Select an element to view properties",
     projectUnavailable: "Project is not available.",
   },
@@ -102,6 +191,7 @@ const EN: ViewerCopy = {
     uploadHint: "Drag and drop or click to browse",
     fitView: "Fit view",
     reset: "Reset",
+    clear: "Clear",
     searchPlaceholder: "Search element types...",
     modelInfo: "Model info",
     elements: "Elements",
@@ -121,6 +211,9 @@ const EN: ViewerCopy = {
     zoomOut: "Out",
     screenshot: "Snap",
     shortcuts: "Keys",
+    focus: "Focus",
+    hide: "Hide",
+    showAll: "Show",
   },
   documents: {
     title: "Documents",
@@ -136,6 +229,87 @@ const EN: ViewerCopy = {
     uploadError: "Upload failed",
     downloadError: "Download failed",
     previewError: "This file type cannot be previewed in 3D.",
+  },
+  planning: {
+    importTitle: "Import Planning",
+    importSubtitle: "Compatible XML imports: MS Project, Primavera P6, Asta Powerproject.",
+    importButton: "Import XML",
+    importFailed: "Import failed",
+    importFirst: "Import a planning file first",
+    tasksImported: "tasks imported",
+    noTasksFound: "No tasks found in this XML file",
+    linkingTitle: "Object-Task Linking",
+    linkingSubtitle: "Link selected 3D elements to planning tasks.",
+    selectTask: "Select a task",
+    linkButton: "Link selected element",
+    unlinkButton: "Unlink",
+    selectedElement: "Selected element",
+    noElementSelected: "No element selected in 3D viewer",
+    noLinks: "No links created yet",
+    playerTitle: "4D Player",
+    playerSubtitle: "Run phasing simulation and export a client-ready video.",
+    play: "Play",
+    pause: "Pause",
+    exportMp4: "Export .mp4",
+    exporting: "Exporting...",
+    exportReadyMp4: "4D video exported as .mp4",
+    exportReadyWebm: "Browser fallback exported as .webm (MP4 unsupported)",
+    viewerUnavailable: "Viewer canvas is not available",
+    recorderUnavailable: "Video recording is not supported in this browser",
+    stepDuration: "Step duration",
+    currentTask: "Current phase",
+    predictiveTitle: "Predictive Analysis",
+    predictiveSubtitle: "Automatic sequencing consistency checks.",
+    noIssues: "No sequencing issues detected.",
+    issueMissingDates: "Missing or invalid dates",
+    issueInvalidRange: "Task end date is before start date",
+    issueUnknownPredecessor: "Unknown predecessor reference",
+    issueUnlinkedTask: "No linked 3D object",
+    issueOverlap: "Potential overlap without dependency",
+  },
+  costing: {
+    title: "5D Estimation & Cost Control",
+    subtitle: "Price libraries, automated quantities, live financial dashboard.",
+    importBpu: "Import Excel BPU",
+    importLandXml: "Import LandXML",
+    importFailed: "Import failed",
+    libraries: "Price libraries",
+    noLibraries: "No BPU library imported yet",
+    baseCurrency: "Base currency",
+    threshold: "Alert threshold %",
+    quantityAuto: "Automated quantities",
+    noQuantities: "No BIM quantities available",
+    linkBpu: "BPU link",
+    noLink: "No linked item",
+    budgetEstimated: "Estimated budget",
+    budgetModel: "Model budget",
+    variance: "Variance",
+    varianceAlert: "Threshold exceeded",
+    liveDashboard: "Live financial dashboard",
+    progressTitle: "Digital attachment",
+    selectedPiece: "Selected piece",
+    noSelection: "Select a piece in the 3D viewer",
+    progress: "Progress %",
+    applyProgress: "Apply progress",
+    validate: "Validate",
+    generatePdf: "Generate PDF",
+    generateXls: "Generate XLS",
+    generated: "Situation generated",
+    disciplineTitle: "Native multi-discipline support",
+    building: "Building",
+    structure: "Structure / MEP",
+    infra: "Infra / VRD",
+    art: "Civil structure",
+    landXmlMetrics: "LandXML metrics",
+    cutVolume: "Cut volume",
+    fillVolume: "Fill volume",
+    networkLength: "Network length",
+    roadArea: "Road area",
+    quantityCount: "Count",
+    quantityArea: "Area",
+    quantityVolume: "Volume",
+    quantityLength: "Length",
+    quantityPerimeter: "Perimeter",
   },
 };
 
@@ -161,6 +335,8 @@ const FR: ViewerCopy = {
     tabProperties: "Propriétés",
     tabComments: "Commentaires",
     tabDocuments: "Documents",
+    tabPlanning: "Planning 4D",
+    tabCosting: "Coûts 5D",
     selectElement: "Sélectionnez un élément pour voir ses propriétés",
     projectUnavailable: "Le projet est indisponible.",
   },
@@ -171,6 +347,7 @@ const FR: ViewerCopy = {
     uploadHint: "Glissez-déposez ou cliquez pour parcourir",
     fitView: "Ajuster",
     reset: "Réinitialiser",
+    clear: "Effacer",
     searchPlaceholder: "Rechercher les types d'éléments...",
     modelInfo: "Infos modèle",
     elements: "Éléments",
@@ -190,6 +367,9 @@ const FR: ViewerCopy = {
     zoomOut: "Moins",
     screenshot: "Capt.",
     shortcuts: "Touches",
+    focus: "Focus",
+    hide: "Masquer",
+    showAll: "Tout",
   },
   documents: {
     title: "Documents",
@@ -205,6 +385,89 @@ const FR: ViewerCopy = {
     uploadError: "Échec de l'import",
     downloadError: "Échec du téléchargement",
     previewError: "Ce type de fichier ne peut pas être prévisualisé en 3D.",
+  },
+  planning: {
+    ...EN.planning,
+    importTitle: "Import planning",
+    importSubtitle: "Import XML compatible MS Project, Primavera P6, Asta Powerproject.",
+    importButton: "Importer XML",
+    importFailed: "Échec de l'import",
+    importFirst: "Importez d'abord un planning",
+    tasksImported: "tâches importées",
+    noTasksFound: "Aucune tâche trouvée dans ce fichier XML",
+    linkingTitle: "Liaison Objet-Tâche",
+    linkingSubtitle: "Liez l'élément 3D sélectionné à une tâche du planning.",
+    selectTask: "Sélectionner une tâche",
+    linkButton: "Lier l'élément sélectionné",
+    unlinkButton: "Délier",
+    selectedElement: "Élément sélectionné",
+    noElementSelected: "Aucun élément sélectionné dans la vue 3D",
+    noLinks: "Aucune liaison créée",
+    playerTitle: "Player 4D",
+    playerSubtitle: "Simulez le phasage chantier et exportez la vidéo client.",
+    play: "Lire",
+    pause: "Pause",
+    exportMp4: "Exporter .mp4",
+    exporting: "Export...",
+    exportReadyMp4: "Vidéo 4D exportée en .mp4",
+    exportReadyWebm: "Export fallback en .webm (MP4 non supporté)",
+    viewerUnavailable: "Canvas 3D indisponible",
+    recorderUnavailable: "L'enregistrement vidéo n'est pas supporté ici",
+    stepDuration: "Durée d'étape",
+    currentTask: "Phase en cours",
+    predictiveTitle: "Analyse prédictive",
+    predictiveSubtitle: "Détection automatique des incohérences de séquencement.",
+    noIssues: "Aucune incohérence détectée.",
+    issueMissingDates: "Dates manquantes ou invalides",
+    issueInvalidRange: "Date de fin antérieure à la date de début",
+    issueUnknownPredecessor: "Référence de prédécesseur inconnue",
+    issueUnlinkedTask: "Aucun objet 3D lié",
+    issueOverlap: "Chevauchement potentiel sans dépendance",
+  },
+  costing: {
+    ...EN.costing,
+    title: "Estimation 5D & Contrôle des coûts",
+    subtitle: "Bibliothèques BPU, quantités automatisées, dashboard financier live.",
+    importBpu: "Importer BPU Excel",
+    importLandXml: "Importer LandXML",
+    importFailed: "Échec de l'import",
+    libraries: "Bibliothèques de prix",
+    noLibraries: "Aucune bibliothèque BPU importée",
+    baseCurrency: "Devise de base",
+    threshold: "Seuil d'alerte %",
+    quantityAuto: "Quantitatif automatisé",
+    noQuantities: "Aucune quantité BIM disponible",
+    linkBpu: "Liaison BPU",
+    noLink: "Aucun article lié",
+    budgetEstimated: "Budget estimé",
+    budgetModel: "Budget maquette",
+    variance: "Écart",
+    varianceAlert: "Seuil dépassé",
+    liveDashboard: "Dashboard financier live",
+    progressTitle: "Attachement digital",
+    selectedPiece: "Pièce sélectionnée",
+    noSelection: "Sélectionnez une pièce dans la maquette 3D",
+    progress: "Avancement %",
+    applyProgress: "Appliquer l'avancement",
+    validate: "Valider",
+    generatePdf: "Générer PDF",
+    generateXls: "Générer XLS",
+    generated: "Situation générée",
+    disciplineTitle: "Support multi-métiers natif",
+    building: "Bâtiment",
+    structure: "Structure / MEP",
+    infra: "Infra / VRD",
+    art: "Ouvrage d'art",
+    landXmlMetrics: "Métriques LandXML",
+    cutVolume: "Volume déblais",
+    fillVolume: "Volume remblais",
+    networkLength: "Linéaire réseau",
+    roadArea: "Surface chaussée",
+    quantityCount: "Nombre",
+    quantityArea: "Surface",
+    quantityVolume: "Volume",
+    quantityLength: "Longueur",
+    quantityPerimeter: "Périmètre",
   },
 };
 
@@ -230,6 +493,8 @@ const DE: ViewerCopy = {
     tabProperties: "Eigenschaften",
     tabComments: "Kommentare",
     tabDocuments: "Dokumente",
+    tabPlanning: "4D-Planung",
+    tabCosting: "5D-Kosten",
     selectElement: "Wähle ein Element, um Eigenschaften anzuzeigen",
     projectUnavailable: "Projekt ist nicht verfügbar.",
   },
@@ -240,6 +505,7 @@ const DE: ViewerCopy = {
     uploadHint: "Per Drag-and-drop oder Klick auswählen",
     fitView: "Ansicht anpassen",
     reset: "Zurücksetzen",
+    clear: "Leeren",
     searchPlaceholder: "Elementtypen suchen...",
     modelInfo: "Modellinfo",
     elements: "Elemente",
@@ -259,6 +525,9 @@ const DE: ViewerCopy = {
     zoomOut: "Raus",
     screenshot: "Bild",
     shortcuts: "Tasten",
+    focus: "Fokus",
+    hide: "Ausbl.",
+    showAll: "Alle",
   },
   documents: {
     title: "Dokumente",
@@ -274,6 +543,13 @@ const DE: ViewerCopy = {
     uploadError: "Upload fehlgeschlagen",
     downloadError: "Download fehlgeschlagen",
     previewError: "Dieser Dateityp kann nicht in 3D angezeigt werden.",
+  },
+  costing: {
+    ...EN.costing,
+    title: "5D Kostensteuerung",
+    subtitle: "Preislisten, automatische Mengen, Live-Finanzdashboard.",
+    importBpu: "Excel BPU importieren",
+    importLandXml: "LandXML importieren",
   },
 };
 
@@ -299,6 +575,8 @@ const AR: ViewerCopy = {
     tabProperties: "الخصائص",
     tabComments: "التعليقات",
     tabDocuments: "الوثائق",
+    tabPlanning: "تخطيط 4D",
+    tabCosting: "تكاليف 5D",
     selectElement: "حدّد عنصرًا لعرض الخصائص",
     projectUnavailable: "المشروع غير متاح.",
   },
@@ -309,6 +587,7 @@ const AR: ViewerCopy = {
     uploadHint: "اسحب وأفلت أو انقر للتصفح",
     fitView: "ضبط العرض",
     reset: "إعادة تعيين",
+    clear: "مسح",
     searchPlaceholder: "ابحث في أنواع العناصر...",
     modelInfo: "معلومات النموذج",
     elements: "العناصر",
@@ -328,6 +607,9 @@ const AR: ViewerCopy = {
     zoomOut: "تصغير",
     screenshot: "لقطة",
     shortcuts: "اختصارات",
+    focus: "تركيز",
+    hide: "إخفاء",
+    showAll: "إظهار",
   },
   documents: {
     title: "الوثائق",
@@ -343,6 +625,13 @@ const AR: ViewerCopy = {
     uploadError: "فشل الرفع",
     downloadError: "فشل التنزيل",
     previewError: "لا يمكن معاينة هذا النوع من الملفات ثلاثي الأبعاد.",
+  },
+  costing: {
+    ...EN.costing,
+    title: "تقدير 5D والتحكم بالتكلفة",
+    subtitle: "مكتبات الأسعار والكميات الآلية ولوحة مالية مباشرة.",
+    importBpu: "استيراد BPU Excel",
+    importLandXml: "استيراد LandXML",
   },
 };
 
