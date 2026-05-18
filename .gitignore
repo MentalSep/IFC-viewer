@@ -5,3 +5,4 @@ dist
 .idea
 PHASE*
 ARCHITECTURE_EVOLUTION.md
+.env
