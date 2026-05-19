@@ -47,17 +47,16 @@ export default function DocumentBrowser({
     if (!file) return;
 
     setBrowserError(null);
-    if (!isSupported3DFileName(file.name)) {
-      setBrowserError(copy.previewError);
-      e.currentTarget.value = "";
-      return;
-    }
-
     try {
+      if (!isSupported3DFileName(file.name)) {
+        setBrowserError(copy.previewError);
+        return;
+      }
       await upload(projectId, file);
-      e.currentTarget.value = "";
     } catch (err) {
       setBrowserError(err instanceof Error ? err.message : copy.uploadError);
+    } finally {
+      e.currentTarget.value = "";
     }
   };
 
@@ -95,6 +94,8 @@ export default function DocumentBrowser({
         type: blob.type || "application/octet-stream",
       });
       onSelectDocument(file);
+    } catch (error) {
+      setBrowserError(error instanceof Error ? error.message : copy.downloadError);
     } finally {
       setOpeningDocId(null);
     }
@@ -164,11 +165,11 @@ export default function DocumentBrowser({
                   <button
                     className="icon-btn"
                     onClick={() => void handleOpenInViewer(doc.id, doc.name)}
-                      title={
-                       isPreviewable3DFileName(doc.name)
-                         ? copy.openViewer
-                         : copy.previewUnavailable
-                     }
+                    title={
+                        isPreviewable3DFileName(doc.name)
+                          ? copy.openViewer
+                          : copy.previewUnavailable
+                      }
                      disabled={openingDocId === doc.id || !isPreviewable3DFileName(doc.name)}
                    >
                     {openingDocId === doc.id ? "..." : <Icon name="eye" />}

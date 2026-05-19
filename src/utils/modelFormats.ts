@@ -1,5 +1,6 @@
 export const SUPPORTED_3D_EXTENSIONS = [
   "ifc",
+  "dwg",
   "rvt",
   "glb",
   "gltf",
@@ -11,6 +12,7 @@ export const SUPPORTED_3D_EXTENSIONS = [
 
 export const PREVIEWABLE_3D_EXTENSIONS = [
   "ifc",
+  "dwg",
   "glb",
   "gltf",
   "obj",

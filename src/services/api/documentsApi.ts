@@ -309,28 +309,44 @@ export const documentsApi = {
       doc(firebaseDb, "projects", projectId, "documents", docId),
     );
     if (!documentSnap.exists()) throw new Error("Document not found");
-    const activeVersionId = documentSnap.data().activeVersionId;
-    if (!activeVersionId) throw new Error("No active version available");
+    const documentData = documentSnap.data();
+    const activeVersionId = documentData.activeVersionId as string | undefined;
 
-    const activeVersionSnap = await getDoc(
-      doc(
-        firebaseDb,
-        "projects",
-        projectId,
-        "documents",
-        docId,
-        "versions",
-        activeVersionId,
-      ),
-    );
-    if (!activeVersionSnap.exists()) throw new Error("Active version not found");
+    let activeVersionSnap: Awaited<ReturnType<typeof getDoc>> | null = null;
+    if (activeVersionId) {
+      activeVersionSnap = await getDoc(
+        doc(
+          firebaseDb,
+          "projects",
+          projectId,
+          "documents",
+          docId,
+          "versions",
+          activeVersionId,
+        ),
+      );
+    }
 
-    const localFileKey = activeVersionSnap.data().localFileKey as
+    if (!activeVersionSnap?.exists()) {
+      const fallbackQuery = query(
+        collection(firebaseDb, "projects", projectId, "documents", docId, "versions"),
+        orderBy("versionNumber", "desc"),
+        limit(1),
+      );
+      const fallbackSnap = await getDocs(fallbackQuery);
+      if (fallbackSnap.empty) {
+        throw new Error("No downloadable version available");
+      }
+      activeVersionSnap = fallbackSnap.docs[0];
+    }
+
+    const activeVersionData = activeVersionSnap.data();
+    const localFileKey = activeVersionData.localFileKey as
       | string
       | undefined;
-    const path = activeVersionSnap.data().storagePath as string | undefined;
-    const url = activeVersionSnap.data().downloadUrl as string | undefined;
-    const fileName = (activeVersionSnap.data().fileName as string | undefined) ?? "file";
+    const path = activeVersionData.storagePath as string | undefined;
+    const url = activeVersionData.downloadUrl as string | undefined;
+    const fileName = (activeVersionData.fileName as string | undefined) ?? "file";
     if (localFileKey) {
       const localBlob = await getLocalFile(localFileKey);
       if (localBlob) {

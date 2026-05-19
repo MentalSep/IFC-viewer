@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Icon } from "../components/ui/Icon";
+import { motion } from "framer-motion";
+import { Icon, type IconName } from "../components/ui/Icon";
 import { Navbar } from "../components/Navbar";
 import { AppFooter } from "../components/AppFooter";
 import { useAppLanguage } from "../components/AppLanguage";
@@ -152,12 +153,160 @@ export function Dashboard() {
     });
   }, [projects, projectSearch]);
 
+  const dashboardStats = useMemo(() => {
+    const totalDocuments = projects.reduce(
+      (sum, project) => sum + (project.documentsCount ?? project.documents?.length ?? 0),
+      0,
+    );
+    const totalMembers = projects.reduce((sum, project) => sum + (project.memberCount ?? 0), 0);
+    const activeProjects = projects.filter((project) => project.status === "active").length;
+    const latestProject = [...projects].sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    )[0];
+    return {
+      totalDocuments,
+      totalMembers,
+      activeProjects,
+      latestProject,
+    };
+  }, [projects]);
+
   return (
     <div className="dashboard">
       <Navbar variant="dashboard" />
 
       {/* Main Content */}
       <div className="dashboard-content">
+        <motion.section
+          className="dashboard-hero"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+        >
+          <div className="dashboard-hero-copy">
+            <span className="dashboard-eyebrow">{copy.dashboard.title}</span>
+            <h1>{copy.dashboard.subtitle}</h1>
+            <p>
+              Manage BIM projects, documents, collaboration, and session access from one
+              enterprise command center.
+            </p>
+          </div>
+          <div className="dashboard-hero-panel">
+            <div className="dashboard-hero-panel-title">Workspace status</div>
+            <div className="dashboard-hero-value">{dashboardStats.activeProjects}</div>
+            <div className="dashboard-hero-caption">active projects ready for review</div>
+            {dashboardStats.latestProject && (
+              <div className="dashboard-hero-meta">
+                Latest: {dashboardStats.latestProject.name}
+              </div>
+            )}
+          </div>
+        </motion.section>
+
+        <div className="dashboard-stats-grid">
+          {(
+            [
+              {
+                label: "Projects",
+                value: projects.length,
+                icon: "folder",
+              hint: "shared BIM workspaces",
+            },
+            {
+              label: "Documents",
+              value: dashboardStats.totalDocuments,
+              icon: "file",
+              hint: "controlled project files",
+            },
+            {
+              label: "Collaborators",
+              value: dashboardStats.totalMembers,
+              icon: "users",
+              hint: "team seats connected",
+            },
+              {
+                label: "Active sessions",
+                value: dashboardStats.activeProjects,
+                icon: "building",
+                hint: "ready for live coordination",
+              },
+            ] as Array<{ label: string; value: number; icon: IconName; hint: string }>
+          ).map((stat) => (
+            <motion.div
+              key={stat.label}
+              className="dashboard-stat-card"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="dashboard-stat-icon">
+                <Icon name={stat.icon} />
+              </div>
+              <div className="dashboard-stat-label">{stat.label}</div>
+              <div className="dashboard-stat-value">{stat.value}</div>
+              <div className="dashboard-stat-hint">{stat.hint}</div>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="dashboard-lanes">
+          <section className="dashboard-lane">
+            <div className="dashboard-lane-header">
+              <div>
+                <h3>Recent projects</h3>
+                <p>Open a workspace or resume your last session.</p>
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setProjectSearch("")}
+              >
+                Clear filters
+              </button>
+            </div>
+            {filteredProjects.length > 0 && (
+              <div className="dashboard-recent-list">
+                {filteredProjects.slice(0, 3).map((project) => (
+                  <button
+                    key={project.id}
+                    className="dashboard-recent-item"
+                    onClick={() => handleOpenProject(project.id)}
+                  >
+                    <div>
+                      <strong>{project.name}</strong>
+                      <span>{project.description || copy.dashboard.noDescription}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="dashboard-lane dashboard-lane-side">
+            <div className="dashboard-lane-header">
+              <div>
+                <h3>Quick actions</h3>
+                <p>Start a new BIM workspace or join a session.</p>
+              </div>
+            </div>
+            <div className="dashboard-quick-actions">
+              <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
+                <Icon name="plus" /> New project
+              </button>
+              {lastProjectId && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => handleOpenProject(lastProjectId)}
+                >
+                  Resume last
+                </button>
+              )}
+              <button className="btn btn-secondary" onClick={() => setProjectSearch("plan")}>
+                <Icon name="search" /> Find plans
+              </button>
+            </div>
+          </section>
+        </div>
+
         {/* Projects Section Header */}
         <div className="section-header">
           <div>

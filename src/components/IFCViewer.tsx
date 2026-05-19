@@ -19,6 +19,8 @@ import type { SelectedElementData, ElementProperty } from "./PropertiesPanel";
 import { getFileExtension } from "../utils/modelFormats";
 import type { ViewerTheme } from "../utils/viewerI18n";
 
+export type HeatmapMode = "none" | "cost" | "progress" | "status" | "planning";
+
 interface IFCViewerProps {
   file: File | null;
   onLoad: () => void;
@@ -26,6 +28,7 @@ interface IFCViewerProps {
   onElementTypesReady: (types: ElementTypeInfo[]) => void;
   onElementSelected: (data: SelectedElementData | null) => void;
   theme?: ViewerTheme;
+  visualMode?: HeatmapMode;
 }
 
 export interface ElementQuantityData {
@@ -135,6 +138,28 @@ function getAllMeshes(root: THREE.Object3D | null): THREE.Mesh[] {
   return meshes;
 }
 
+function hashString(source: string) {
+  let hash = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    hash = (hash << 5) - hash + source.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function heatColor(value: number, mode: HeatmapMode) {
+  const stops: Record<HeatmapMode, [number, number, number]> = {
+    none: [0x38, 0xbd, 0xf8],
+    cost: [0x22, 0xc5, 0x5e],
+    progress: [0x0e, 0xa5, 0xe9],
+    status: [0xf9, 0x73, 0x16],
+    planning: [0xa8, 0x55, 0xf7],
+  };
+  const [r, g, b] = stops[mode];
+  const mix = new THREE.Color(r / 255, g / 255, b / 255);
+  return mix.offsetHSL(((value % 100) / 100) * 0.18, 0.15, 0.02);
+}
+
 function estimateSelectionMetrics(mesh: THREE.Mesh) {
   const box = new THREE.Box3().setFromObject(mesh);
   const size = box.getSize(new THREE.Vector3());
@@ -202,7 +227,7 @@ function extractQuantitiesFromIfcLine(line: Record<string, unknown>) {
 
 const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
   (
-    { file, onLoad, onError, onElementTypesReady, onElementSelected, theme },
+    { file, onLoad, onError, onElementTypesReady, onElementSelected, theme, visualMode = "none" },
     ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -248,6 +273,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
     const originalMaterialsRef = useRef<
       Map<THREE.Mesh, THREE.Material | THREE.Material[]>
     >(new Map());
+    const progressValuesRef = useRef<Map<number, number>>(new Map());
     // Store element type info per expressID for property lookup
     const elementDataRef = useRef<
       Map<number, ElementQuantityData>
@@ -667,9 +693,13 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
             });
 
             const threeJsMesh = new THREE.Mesh(bufferGeometry, material);
+            threeJsMesh.userData = {
+              expressId: expressID,
+              ifcType,
+              baseColor: color.clone(),
+              baseOpacity: opacity,
+            };
 
-            // Store lookup metadata for selection interactions
-            threeJsMesh.userData = { expressId: expressID, ifcType };
             const meshList = elementMeshesRef.current.get(expressID) ?? [];
             meshList.push(threeJsMesh);
             elementMeshesRef.current.set(expressID, meshList);
@@ -883,9 +913,13 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
                 side: THREE.DoubleSide,
               }),
             );
+          } else if (extension === "dwg") {
+            throw new Error(
+              "DWG files are not previewable in-browser yet. Convert them to IFC, GLB, GLTF, OBJ, STL, FBX, or PLY first.",
+            );
           } else {
             throw new Error(
-              "Unsupported 3D format. Use IFC, GLB, GLTF, OBJ, STL, FBX, or PLY.",
+              "Unsupported 3D format. Use IFC, DWG, GLB, GLTF, OBJ, STL, FBX, or PLY.",
             );
           }
 
@@ -901,11 +935,23 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           }
 
           const center = box.getCenter(new THREE.Vector3());
-          group.position.sub(center);
-          group.position.y += size.y / 2;
+        group.position.sub(center);
+        group.position.y += size.y / 2;
 
-          modelRef.current = group;
-          scene.add(group);
+        group.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mat = child.material;
+            if (mat instanceof THREE.MeshStandardMaterial) {
+              (child.userData as { baseColor?: THREE.Color; baseOpacity?: number }).baseColor =
+                mat.color.clone();
+              (child.userData as { baseColor?: THREE.Color; baseOpacity?: number }).baseOpacity =
+                mat.opacity;
+            }
+          }
+        });
+
+        modelRef.current = group;
+        scene.add(group);
           const meshes = getAllMeshes(group);
           const byType: ElementQuantityData = {
             expressId: -1,
@@ -1274,6 +1320,7 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       if (!meshes || meshes.length === 0) return false;
       const clamped = Math.max(0, Math.min(100, progress));
       const t = clamped / 100;
+      progressValuesRef.current.set(expressId, clamped);
       const tint = new THREE.Color(0xef4444).lerp(new THREE.Color(0x22c55e), t);
       meshes.forEach((mesh) => {
         const mat = mesh.material;
@@ -1385,6 +1432,54 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       }
       needsRenderRef.current = true;
     }, [theme]);
+
+    useEffect(() => {
+      const model = modelRef.current;
+      if (!model) return;
+
+      const meshes = getAllMeshes(model);
+      meshes.forEach((mesh, index) => {
+        const mat = mesh.material;
+        if (!(mat instanceof THREE.MeshStandardMaterial)) return;
+
+        const baseColor =
+          (mesh.userData as { baseColor?: THREE.Color }).baseColor ?? mat.color.clone();
+        const baseOpacity =
+          (mesh.userData as { baseOpacity?: number }).baseOpacity ?? 1;
+
+        if (visualMode === "none") {
+          mat.color.copy(baseColor);
+          mat.emissive.setHex(0x000000);
+          mat.opacity = baseOpacity;
+          mat.transparent = baseOpacity < 1;
+          mat.needsUpdate = true;
+          return;
+        }
+
+        const progressValue =
+          progressValuesRef.current.get(Number((mesh.userData as { expressId?: number }).expressId)) ??
+          ((index * 17) % 100);
+        const typeKey =
+          (mesh.userData as { ifcType?: string }).ifcType ??
+          mesh.name ??
+          `mesh-${index}`;
+        const hash = hashString(typeKey);
+
+        let value = progressValue;
+        if (visualMode === "cost") value = hash % 100;
+        if (visualMode === "status") value = ((hash >> 3) % 100 + progressValue) / 2;
+        if (visualMode === "planning") value = (index * 13 + progressValue) % 100;
+
+        const tint = heatColor(value, visualMode);
+        mat.color.copy(baseColor).lerp(tint, 0.72);
+        mat.emissive.copy(tint).multiplyScalar(0.12);
+        mat.transparent = true;
+        mat.opacity = Math.min(1, baseOpacity * 0.92);
+        mat.needsUpdate = true;
+      });
+
+      needsRenderRef.current = true;
+    }, [visualMode]);
 
     // Load file when it changes - with minimal stable dependencies
     useEffect(() => {

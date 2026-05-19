@@ -1,13 +1,60 @@
-export type ViewerLocale = "en" | "fr" | "de" | "ar";
-export type ViewerTheme = "dark" | "light" | "aurora";
+export type ViewerLocale = "en" | "fr" | "de" | "es" | "it" | "ar";
+export type ViewerTheme = "dark" | "light" | "aurora" | "midnight" | "forest";
 
-export const VIEWER_THEMES: ViewerTheme[] = ["dark", "light", "aurora"];
+export const VIEWER_THEMES: ViewerTheme[] = ["dark", "light", "aurora", "midnight", "forest"];
 
 export interface ViewerCopy {
   localeLabel: string;
   localeNames: Record<ViewerLocale, string>;
   themeLabel: string;
   themeNames: Record<ViewerTheme, string>;
+  workspace: {
+    commandPaletteTitle: string;
+    commandPaletteSubtitle: string;
+    expand: string;
+    collapse: string;
+    groupTitles: {
+      navigation: string;
+      visibility: string;
+      measurements: string;
+      actions: string;
+    };
+    searchTitle: string;
+    searchSubtitle: string;
+    searchPlaceholder: string;
+    searchCategory: string;
+    searchChipPrefix: string;
+    heatmapTitle: string;
+    heatmapSubtitle: string;
+    heatmapModes: Record<"none" | "cost" | "progress" | "status" | "planning", string>;
+    presenceTitle: string;
+    presenceSubtitle: string;
+    presenceActive: string;
+    presenceStatuses: {
+      online: string;
+      away: string;
+      typing: string;
+    };
+    activityTitle: string;
+    activitySubtitle: string;
+    activityKinds: {
+      upload: string;
+      comment: string;
+      planning: string;
+      action: string;
+    };
+    minimapTitle: string;
+    minimapSubtitle: string;
+    minimapFit: string;
+    timelineTitle: string;
+    timelineSubtitle: string;
+    timelinePlay: string;
+    timelinePause: string;
+    timelineSpeed: string;
+    metricsModelTypes: string;
+    metricsComments: string;
+    metricsFeedItems: string;
+  };
   shell: {
     title: string;
     subtitle: string;
@@ -117,6 +164,12 @@ export interface ViewerCopy {
     subtitle: string;
     importBpu: string;
     importLandXml: string;
+    marketPricingTitle: string;
+    marketPricingSubtitle: string;
+    marketPricingSource: string;
+    marketPricingRefresh: string;
+    marketPricingLatest: string;
+    marketPricingEstimate: string;
     importFailed: string;
     libraries: string;
     noLibraries: string;
@@ -160,9 +213,62 @@ export interface ViewerCopy {
 
 const EN: ViewerCopy = {
   localeLabel: "Language",
-  localeNames: { en: "English", fr: "French", de: "German", ar: "Arabic" },
+  localeNames: { en: "English", fr: "French", de: "German", es: "Spanish", it: "Italian", ar: "Arabic" },
   themeLabel: "Theme",
-  themeNames: { dark: "Dark", light: "Light", aurora: "Aurora" },
+  themeNames: { dark: "Dark", light: "Light", aurora: "Aurora", midnight: "Midnight", forest: "Forest" },
+  workspace: {
+    commandPaletteTitle: "Command palette",
+    commandPaletteSubtitle: "Smart BIM tools",
+    expand: "Expand",
+    collapse: "Collapse",
+    groupTitles: {
+      navigation: "Navigation",
+      visibility: "Visibility",
+      measurements: "Measurements",
+      actions: "Actions",
+    },
+    searchTitle: "Object search",
+    searchSubtitle: "Find model elements",
+    searchPlaceholder: "Search by type, label, or category",
+    searchCategory: "Model type",
+    searchChipPrefix: "#",
+    heatmapTitle: "Heatmaps",
+    heatmapSubtitle: "Visualization modes",
+    heatmapModes: {
+      none: "Standard",
+      cost: "Cost",
+      progress: "Progress",
+      status: "Status",
+      planning: "Planning",
+    },
+    presenceTitle: "Live presence",
+    presenceSubtitle: "Collaborators online",
+    presenceActive: "active",
+    presenceStatuses: {
+      online: "online",
+      away: "away",
+      typing: "typing",
+    },
+    activityTitle: "Activity",
+    activitySubtitle: "Real-time feed",
+    activityKinds: {
+      upload: "upload",
+      comment: "comment",
+      planning: "planning",
+      action: "action",
+    },
+    minimapTitle: "Navigator",
+    minimapSubtitle: "Floor minimap",
+    minimapFit: "Fit",
+    timelineTitle: "4D timeline",
+    timelineSubtitle: "Construction flow",
+    timelinePlay: "Play",
+    timelinePause: "Pause",
+    timelineSpeed: "Speed",
+    metricsModelTypes: "Model types",
+    metricsComments: "Comments",
+    metricsFeedItems: "Feed items",
+  },
   shell: {
     title: "Project Viewer",
     subtitle: "3D model, documents, comments, and chat in one workspace.",
@@ -186,7 +292,7 @@ const EN: ViewerCopy = {
   },
   sidebar: {
     title: "File viewer",
-    subtitle: "Load IFC, RVT, GLB, GLTF, OBJ, STL, FBX, or PLY files.",
+    subtitle: "Load IFC, DWG, RVT, GLB, GLTF, OBJ, STL, FBX, or PLY files.",
     uploadTitle: "Upload 3D file",
     uploadHint: "Drag and drop or click to browse",
     fitView: "Fit view",
@@ -272,6 +378,12 @@ const EN: ViewerCopy = {
     subtitle: "Price libraries, automated quantities, live financial dashboard.",
     importBpu: "Import Excel BPU",
     importLandXml: "Import LandXML",
+    marketPricingTitle: "Market price estimates",
+    marketPricingSubtitle: "Use a public building-materials index to adjust missing or imported unit prices.",
+    marketPricingSource: "Source: FRED / Building Material and Supplies Dealers index",
+    marketPricingRefresh: "Refresh market index",
+    marketPricingLatest: "Latest index",
+    marketPricingEstimate: "Estimated from market",
     importFailed: "Import failed",
     libraries: "Price libraries",
     noLibraries: "No BPU library imported yet",
@@ -316,9 +428,63 @@ const EN: ViewerCopy = {
 const FR: ViewerCopy = {
   ...EN,
   localeLabel: "Langue",
-  localeNames: { en: "Anglais", fr: "Français", de: "Allemand", ar: "Arabe" },
+  localeNames: { en: "Anglais", fr: "Français", de: "Allemand", es: "Espagnol", it: "Italien", ar: "Arabe" },
   themeLabel: "Thème",
-  themeNames: { dark: "Sombre", light: "Clair", aurora: "Aurore" },
+    themeNames: { dark: "Sombre", light: "Clair", aurora: "Aurore", midnight: "Minuit", forest: "Forêt" },
+  workspace: {
+    ...EN.workspace,
+    commandPaletteTitle: "Palette de commandes",
+    commandPaletteSubtitle: "Outils BIM intelligents",
+    expand: "Développer",
+    collapse: "Réduire",
+    groupTitles: {
+      navigation: "Navigation",
+      visibility: "Visibilité",
+      measurements: "Mesures",
+      actions: "Actions",
+    },
+    searchTitle: "Recherche d’objets",
+    searchSubtitle: "Trouver des éléments du modèle",
+    searchPlaceholder: "Rechercher par type, libellé ou catégorie",
+    searchCategory: "Type de modèle",
+    searchChipPrefix: "#",
+    heatmapTitle: "Cartes thermiques",
+    heatmapSubtitle: "Modes de visualisation",
+    heatmapModes: {
+      none: "Standard",
+      cost: "Coût",
+      progress: "Avancement",
+      status: "Statut",
+      planning: "Planning",
+    },
+    presenceTitle: "Présence en direct",
+    presenceSubtitle: "Collaborateurs connectés",
+    presenceActive: "actifs",
+    presenceStatuses: {
+      online: "en ligne",
+      away: "absent",
+      typing: "en train d’écrire",
+    },
+    activityTitle: "Activité",
+    activitySubtitle: "Flux en temps réel",
+    activityKinds: {
+      upload: "import",
+      comment: "commentaire",
+      planning: "planning",
+      action: "action",
+    },
+    minimapTitle: "Navigateur",
+    minimapSubtitle: "Mini-plan des niveaux",
+    minimapFit: "Ajuster",
+    timelineTitle: "Chronologie 4D",
+    timelineSubtitle: "Flux de construction",
+    timelinePlay: "Lire",
+    timelinePause: "Pause",
+    timelineSpeed: "Vitesse",
+    metricsModelTypes: "Types de modèle",
+    metricsComments: "Commentaires",
+    metricsFeedItems: "Éléments du flux",
+  },
   shell: {
     title: "Visionneuse projet",
     subtitle: "Maquette 3D, documents, commentaires et chat dans un seul espace.",
@@ -342,7 +508,7 @@ const FR: ViewerCopy = {
   },
   sidebar: {
     title: "Visionneuse de fichier",
-    subtitle: "Chargez des fichiers IFC, RVT, GLB, GLTF, OBJ, STL, FBX ou PLY.",
+    subtitle: "Chargez des fichiers IFC, DWG, RVT, GLB, GLTF, OBJ, STL, FBX ou PLY.",
     uploadTitle: "Importer un fichier 3D",
     uploadHint: "Glissez-déposez ou cliquez pour parcourir",
     fitView: "Ajuster",
@@ -430,6 +596,12 @@ const FR: ViewerCopy = {
     subtitle: "Bibliothèques BPU, quantités automatisées, dashboard financier live.",
     importBpu: "Importer BPU Excel",
     importLandXml: "Importer LandXML",
+    marketPricingTitle: "Estimations de prix marché",
+    marketPricingSubtitle: "Utilise un indice public des matériaux pour ajuster les prix unitaires manquants ou importés.",
+    marketPricingSource: "Source : FRED / indice Building Material and Supplies Dealers",
+    marketPricingRefresh: "Actualiser l'indice",
+    marketPricingLatest: "Indice le plus récent",
+    marketPricingEstimate: "Estimé depuis le marché",
     importFailed: "Échec de l'import",
     libraries: "Bibliothèques de prix",
     noLibraries: "Aucune bibliothèque BPU importée",
@@ -474,9 +646,63 @@ const FR: ViewerCopy = {
 const DE: ViewerCopy = {
   ...EN,
   localeLabel: "Sprache",
-  localeNames: { en: "Englisch", fr: "Französisch", de: "Deutsch", ar: "Arabisch" },
+  localeNames: { en: "Englisch", fr: "Französisch", de: "Deutsch", es: "Spanisch", it: "Italienisch", ar: "Arabisch" },
   themeLabel: "Design",
-  themeNames: { dark: "Dunkel", light: "Hell", aurora: "Aurora" },
+    themeNames: { dark: "Dunkel", light: "Hell", aurora: "Aurora", midnight: "Mitternacht", forest: "Wald" },
+  workspace: {
+    ...EN.workspace,
+    commandPaletteTitle: "Befehlsleiste",
+    commandPaletteSubtitle: "Intelligente BIM-Tools",
+    expand: "Erweitern",
+    collapse: "Einklappen",
+    groupTitles: {
+      navigation: "Navigation",
+      visibility: "Sichtbarkeit",
+      measurements: "Messungen",
+      actions: "Aktionen",
+    },
+    searchTitle: "Objektsuche",
+    searchSubtitle: "Modellelemente finden",
+    searchPlaceholder: "Nach Typ, Bezeichnung oder Kategorie suchen",
+    searchCategory: "Modelltyp",
+    searchChipPrefix: "#",
+    heatmapTitle: "Heatmaps",
+    heatmapSubtitle: "Visualisierungsmodi",
+    heatmapModes: {
+      none: "Standard",
+      cost: "Kosten",
+      progress: "Fortschritt",
+      status: "Status",
+      planning: "Planung",
+    },
+    presenceTitle: "Live-Präsenz",
+    presenceSubtitle: "Kollaboratoren online",
+    presenceActive: "aktiv",
+    presenceStatuses: {
+      online: "online",
+      away: "abwesend",
+      typing: "tippt",
+    },
+    activityTitle: "Aktivität",
+    activitySubtitle: "Echtzeit-Feed",
+    activityKinds: {
+      upload: "Upload",
+      comment: "Kommentar",
+      planning: "Planung",
+      action: "Aktion",
+    },
+    minimapTitle: "Navigator",
+    minimapSubtitle: "Mini-Grundriss",
+    minimapFit: "Anpassen",
+    timelineTitle: "4D-Zeitleiste",
+    timelineSubtitle: "Bauablauf",
+    timelinePlay: "Start",
+    timelinePause: "Pause",
+    timelineSpeed: "Geschwindigkeit",
+    metricsModelTypes: "Modelltypen",
+    metricsComments: "Kommentare",
+    metricsFeedItems: "Feed-Elemente",
+  },
   shell: {
     title: "Projekt-Viewer",
     subtitle: "3D-Modell, Dokumente, Kommentare und Chat in einem Arbeitsbereich.",
@@ -500,7 +726,7 @@ const DE: ViewerCopy = {
   },
   sidebar: {
     title: "Datei-Viewer",
-    subtitle: "Lade IFC-, RVT-, GLB-, GLTF-, OBJ-, STL-, FBX- oder PLY-Dateien.",
+    subtitle: "Lade IFC-, DWG-, RVT-, GLB-, GLTF-, OBJ-, STL-, FBX- oder PLY-Dateien.",
     uploadTitle: "3D-Datei hochladen",
     uploadHint: "Per Drag-and-drop oder Klick auswählen",
     fitView: "Ansicht anpassen",
@@ -550,15 +776,75 @@ const DE: ViewerCopy = {
     subtitle: "Preislisten, automatische Mengen, Live-Finanzdashboard.",
     importBpu: "Excel BPU importieren",
     importLandXml: "LandXML importieren",
+    marketPricingTitle: "Marktpreis-Schätzungen",
+    marketPricingSubtitle: "Verwendet einen öffentlichen Baustoff-Index, um fehlende oder importierte Einheitspreise anzupassen.",
+    marketPricingSource: "Quelle: FRED / Building Material and Supplies Dealers Index",
+    marketPricingRefresh: "Marktindex aktualisieren",
+    marketPricingLatest: "Aktueller Index",
+    marketPricingEstimate: "Vom Markt geschätzt",
   },
 };
 
 const AR: ViewerCopy = {
   ...EN,
   localeLabel: "اللغة",
-  localeNames: { en: "الإنجليزية", fr: "الفرنسية", de: "الألمانية", ar: "العربية" },
+  localeNames: { en: "الإنجليزية", fr: "الفرنسية", de: "الألمانية", es: "الإسبانية", it: "الإيطالية", ar: "العربية" },
   themeLabel: "السمة",
-  themeNames: { dark: "داكن", light: "فاتح", aurora: "أورورا" },
+    themeNames: { dark: "داكن", light: "فاتح", aurora: "أورورا", midnight: "منتصف الليل", forest: "غابة" },
+  workspace: {
+    ...EN.workspace,
+    commandPaletteTitle: "لوحة الأوامر",
+    commandPaletteSubtitle: "أدوات BIM ذكية",
+    expand: "توسيع",
+    collapse: "طي",
+    groupTitles: {
+      navigation: "التنقل",
+      visibility: "الظهور",
+      measurements: "القياسات",
+      actions: "الإجراءات",
+    },
+    searchTitle: "بحث العناصر",
+    searchSubtitle: "اعثر على عناصر النموذج",
+    searchPlaceholder: "ابحث حسب النوع أو الاسم أو الفئة",
+    searchCategory: "نوع النموذج",
+    searchChipPrefix: "#",
+    heatmapTitle: "خرائط حرارية",
+    heatmapSubtitle: "أوضاع العرض",
+    heatmapModes: {
+      none: "عادي",
+      cost: "التكلفة",
+      progress: "التقدم",
+      status: "الحالة",
+      planning: "التخطيط",
+    },
+    presenceTitle: "الحضور المباشر",
+    presenceSubtitle: "المتعاونون المتصلون",
+    presenceActive: "نشط",
+    presenceStatuses: {
+      online: "متصل",
+      away: "بعيد",
+      typing: "يكتب",
+    },
+    activityTitle: "النشاط",
+    activitySubtitle: "موجز مباشر",
+    activityKinds: {
+      upload: "رفع",
+      comment: "تعليق",
+      planning: "تخطيط",
+      action: "إجراء",
+    },
+    minimapTitle: "المنظّم",
+    minimapSubtitle: "خريطة الطوابق المصغرة",
+    minimapFit: "ملاءمة",
+    timelineTitle: "الخط الزمني 4D",
+    timelineSubtitle: "تدفق البناء",
+    timelinePlay: "تشغيل",
+    timelinePause: "إيقاف",
+    timelineSpeed: "السرعة",
+    metricsModelTypes: "أنواع النموذج",
+    metricsComments: "التعليقات",
+    metricsFeedItems: "عناصر الموجز",
+  },
   shell: {
     title: "عارض المشروع",
     subtitle: "نموذج 3D ووثائق وتعليقات ودردشة في مساحة واحدة.",
@@ -582,7 +868,7 @@ const AR: ViewerCopy = {
   },
   sidebar: {
     title: "عارض الملفات",
-    subtitle: "حمّل ملفات IFC وRVT وGLB وGLTF وOBJ وSTL وFBX وPLY.",
+    subtitle: "حمّل ملفات IFC وDWG وRVT وGLB وGLTF وOBJ وSTL وFBX وPLY.",
     uploadTitle: "رفع ملف 3D",
     uploadHint: "اسحب وأفلت أو انقر للتصفح",
     fitView: "ضبط العرض",
@@ -632,6 +918,342 @@ const AR: ViewerCopy = {
     subtitle: "مكتبات الأسعار والكميات الآلية ولوحة مالية مباشرة.",
     importBpu: "استيراد BPU Excel",
     importLandXml: "استيراد LandXML",
+    marketPricingTitle: "تقديرات أسعار السوق",
+    marketPricingSubtitle: "يستخدم مؤشرًا عامًا لمواد البناء لتعديل الأسعار الوحدوية المفقودة أو المستوردة.",
+    marketPricingSource: "المصدر: FRED / مؤشر Building Material and Supplies Dealers",
+    marketPricingRefresh: "تحديث مؤشر السوق",
+    marketPricingLatest: "آخر مؤشر",
+    marketPricingEstimate: "مقدّر من السوق",
+  },
+};
+
+const ES: ViewerCopy = {
+  ...EN,
+  localeLabel: "Idioma",
+  localeNames: { en: "Inglés", fr: "Francés", de: "Alemán", es: "Español", it: "Italiano", ar: "Árabe" },
+  themeLabel: "Tema",
+  themeNames: { dark: "Oscuro", light: "Claro", aurora: "Aurora", midnight: "Medianoche", forest: "Bosque" },
+  shell: {
+    title: "Visor de proyecto",
+    subtitle: "Modelo 3D, documentos, comentarios y chat en un solo espacio de trabajo.",
+    statusReady: "Listo para cargar un modelo",
+    statusLoading: "Cargando modelo...",
+    statusLoaded: "Modelo cargado correctamente",
+    errorPrefix: "Error",
+  },
+  layout: {
+    collapseSidebar: "Contraer barra lateral",
+    openSidebar: "Abrir barra lateral",
+    openPanel: "Abrir panel",
+    collapsePanel: "Contraer panel",
+    tabProperties: "Propiedades",
+    tabComments: "Comentarios",
+    tabDocuments: "Documentos",
+    tabPlanning: "Planificación 4D",
+    tabCosting: "Costes 5D",
+    selectElement: "Selecciona un elemento para ver sus propiedades",
+    projectUnavailable: "El proyecto no está disponible.",
+  },
+  sidebar: {
+    title: "Visor de archivos",
+    subtitle: "Carga archivos IFC, DWG, RVT, GLB, GLTF, OBJ, STL, FBX o PLY.",
+    uploadTitle: "Subir archivo 3D",
+    uploadHint: "Arrastra y suelta o haz clic para buscar",
+    fitView: "Ajustar vista",
+    reset: "Restablecer",
+    clear: "Borrar",
+    searchPlaceholder: "Buscar tipos de elementos...",
+    modelInfo: "Información del modelo",
+    elements: "Elementos",
+    types: "Tipos",
+    size: "Tamaño",
+    loadTime: "Tiempo de carga",
+    noElements: "Aún no hay tipos de elementos",
+  },
+  toolbar: {
+    wire: "Malla",
+    grid: "Cuadrícula",
+    xray: "Rayos X",
+    measure: "Medir",
+    clear: "Borrar",
+    clip: "Corte",
+    zoomIn: "Acercar",
+    zoomOut: "Alejar",
+    screenshot: "Captura",
+    shortcuts: "Teclas",
+    focus: "Enfocar",
+    hide: "Ocultar",
+    showAll: "Mostrar",
+  },
+  documents: {
+    title: "Documentos",
+    upload: "Subir",
+    uploading: "Subiendo...",
+    loading: "Cargando documentos...",
+    empty: "Todavía no hay documentos subidos",
+    versions: "Ver versiones",
+    download: "Descargar",
+    openViewer: "Abrir en el visor 3D",
+    previewUnavailable: "Vista previa no disponible para este tipo de archivo",
+    activate: "Activar",
+    uploadError: "Error de subida",
+    downloadError: "Error de descarga",
+    previewError: "Este tipo de archivo no se puede previsualizar en 3D.",
+  },
+  planning: {
+    ...EN.planning,
+    importTitle: "Importar planificación",
+    importSubtitle: "Importación XML compatible con MS Project, Primavera P6 y Asta Powerproject.",
+    importButton: "Importar XML",
+    importFailed: "Error de importación",
+    importFirst: "Importa primero un archivo de planificación",
+    tasksImported: "tareas importadas",
+    noTasksFound: "No se encontraron tareas en este archivo XML",
+    linkingTitle: "Vinculación objeto-tarea",
+    linkingSubtitle: "Vincula elementos 3D seleccionados a tareas de planificación.",
+    selectTask: "Selecciona una tarea",
+    linkButton: "Vincular elemento seleccionado",
+    unlinkButton: "Desvincular",
+    selectedElement: "Elemento seleccionado",
+    noElementSelected: "No hay ningún elemento seleccionado en el visor 3D",
+    noLinks: "Aún no hay vínculos creados",
+    playerTitle: "Reproductor 4D",
+    playerSubtitle: "Ejecuta la simulación de fases y exporta un vídeo para cliente.",
+    play: "Reproducir",
+    pause: "Pausar",
+    exportMp4: "Exportar .mp4",
+    exporting: "Exportando...",
+    exportReadyMp4: "Vídeo 4D exportado como .mp4",
+    exportReadyWebm: "Exportación alternativa en .webm (MP4 no compatible)",
+    viewerUnavailable: "El lienzo 3D no está disponible",
+    recorderUnavailable: "La grabación de vídeo no es compatible en este navegador",
+    stepDuration: "Duración del paso",
+    currentTask: "Fase actual",
+    predictiveTitle: "Análisis predictivo",
+    predictiveSubtitle: "Comprobaciones automáticas de coherencia de secuencias.",
+    noIssues: "No se detectaron problemas de secuencia.",
+    issueMissingDates: "Fechas faltantes o inválidas",
+    issueInvalidRange: "La fecha de fin es anterior a la de inicio",
+    issueUnknownPredecessor: "Referencia de predecesor desconocida",
+    issueUnlinkedTask: "Sin objeto 3D vinculado",
+    issueOverlap: "Posible solapamiento sin dependencia",
+  },
+  costing: {
+    ...EN.costing,
+    title: "Estimación 5D y control de costes",
+    subtitle: "Bibliotecas de precios, cantidades automáticas y panel financiero en vivo.",
+    importBpu: "Importar BPU Excel",
+    importLandXml: "Importar LandXML",
+    marketPricingTitle: "Estimaciones de precios de mercado",
+    marketPricingSubtitle:
+      "Usa un índice público de materiales de construcción para ajustar precios unitarios faltantes o importados.",
+    marketPricingSource: "Fuente: FRED / índice Building Material and Supplies Dealers",
+    marketPricingRefresh: "Actualizar índice de mercado",
+    marketPricingLatest: "Índice más reciente",
+    marketPricingEstimate: "Estimado desde el mercado",
+    importFailed: "Error de importación",
+    libraries: "Bibliotecas de precios",
+    noLibraries: "Aún no hay ninguna biblioteca BPU importada",
+    baseCurrency: "Moneda base",
+    threshold: "Umbral de alerta %",
+    quantityAuto: "Cantidades automáticas",
+    noQuantities: "No hay cantidades BIM disponibles",
+    linkBpu: "Vínculo BPU",
+    noLink: "Ningún elemento vinculado",
+    budgetEstimated: "Presupuesto estimado",
+    budgetModel: "Presupuesto del modelo",
+    variance: "Variación",
+    varianceAlert: "Umbral superado",
+    liveDashboard: "Panel financiero en vivo",
+    progressTitle: "Adjunto digital",
+    selectedPiece: "Pieza seleccionada",
+    noSelection: "Selecciona una pieza en el visor 3D",
+    progress: "Progreso %",
+    applyProgress: "Aplicar progreso",
+    validate: "Validar",
+    generatePdf: "Generar PDF",
+    generateXls: "Generar XLS",
+    generated: "Situación generada",
+    disciplineTitle: "Soporte multi-disciplina nativo",
+    building: "Edificio",
+    structure: "Estructura / MEP",
+    infra: "Infra / VRD",
+    art: "Obra civil",
+    landXmlMetrics: "Métricas LandXML",
+    cutVolume: "Volumen de desmonte",
+    fillVolume: "Volumen de relleno",
+    networkLength: "Longitud de red",
+    roadArea: "Área de calzada",
+    quantityCount: "Cantidad",
+    quantityArea: "Área",
+    quantityVolume: "Volumen",
+    quantityLength: "Longitud",
+    quantityPerimeter: "Perímetro",
+  },
+};
+
+const IT: ViewerCopy = {
+  ...EN,
+  localeLabel: "Lingua",
+  localeNames: { en: "Inglese", fr: "Francese", de: "Tedesco", es: "Spagnolo", it: "Italiano", ar: "Arabo" },
+  themeLabel: "Tema",
+  themeNames: { dark: "Scuro", light: "Chiaro", aurora: "Aurora", midnight: "Mezzanotte", forest: "Foresta" },
+  shell: {
+    title: "Visualizzatore progetto",
+    subtitle: "Modello 3D, documenti, commenti e chat in un unico spazio di lavoro.",
+    statusReady: "Pronto per caricare un modello",
+    statusLoading: "Caricamento del modello...",
+    statusLoaded: "Modello caricato correttamente",
+    errorPrefix: "Errore",
+  },
+  layout: {
+    collapseSidebar: "Comprimi barra laterale",
+    openSidebar: "Apri barra laterale",
+    openPanel: "Apri pannello",
+    collapsePanel: "Comprimi pannello",
+    tabProperties: "Proprietà",
+    tabComments: "Commenti",
+    tabDocuments: "Documenti",
+    tabPlanning: "Pianificazione 4D",
+    tabCosting: "Costi 5D",
+    selectElement: "Seleziona un elemento per vedere le proprietà",
+    projectUnavailable: "Il progetto non è disponibile.",
+  },
+  sidebar: {
+    title: "Visualizzatore file",
+    subtitle: "Carica file IFC, DWG, RVT, GLB, GLTF, OBJ, STL, FBX o PLY.",
+    uploadTitle: "Carica file 3D",
+    uploadHint: "Trascina e rilascia oppure fai clic per sfogliare",
+    fitView: "Adatta vista",
+    reset: "Ripristina",
+    clear: "Cancella",
+    searchPlaceholder: "Cerca tipi di elemento...",
+    modelInfo: "Info modello",
+    elements: "Elementi",
+    types: "Tipi",
+    size: "Dimensione",
+    loadTime: "Tempo di caricamento",
+    noElements: "Nessun tipo di elemento ancora",
+  },
+  toolbar: {
+    wire: "Wireframe",
+    grid: "Griglia",
+    xray: "Raggi X",
+    measure: "Misura",
+    clear: "Cancella",
+    clip: "Sezione",
+    zoomIn: "Zoom +",
+    zoomOut: "Zoom -",
+    screenshot: "Screenshot",
+    shortcuts: "Tasti",
+    focus: "Focus",
+    hide: "Nascondi",
+    showAll: "Mostra",
+  },
+  documents: {
+    title: "Documenti",
+    upload: "Carica",
+    uploading: "Caricamento...",
+    loading: "Caricamento documenti...",
+    empty: "Nessun documento caricato ancora",
+    versions: "Vedi versioni",
+    download: "Scarica",
+    openViewer: "Apri nel visualizzatore 3D",
+    previewUnavailable: "Anteprima non disponibile per questo tipo di file",
+    activate: "Attiva",
+    uploadError: "Caricamento non riuscito",
+    downloadError: "Download non riuscito",
+    previewError: "Questo tipo di file non può essere visualizzato in 3D.",
+  },
+  planning: {
+    ...EN.planning,
+    importTitle: "Importa pianificazione",
+    importSubtitle: "Import XML compatibile con MS Project, Primavera P6 e Asta Powerproject.",
+    importButton: "Importa XML",
+    importFailed: "Importazione non riuscita",
+    importFirst: "Importa prima un file di pianificazione",
+    tasksImported: "attività importate",
+    noTasksFound: "Nessuna attività trovata in questo file XML",
+    linkingTitle: "Collegamento oggetto-attività",
+    linkingSubtitle: "Collega gli elementi 3D selezionati alle attività di pianificazione.",
+    selectTask: "Seleziona un'attività",
+    linkButton: "Collega elemento selezionato",
+    unlinkButton: "Scollega",
+    selectedElement: "Elemento selezionato",
+    noElementSelected: "Nessun elemento selezionato nel visualizzatore 3D",
+    noLinks: "Nessun collegamento creato",
+    playerTitle: "Player 4D",
+    playerSubtitle: "Esegui la simulazione delle fasi ed esporta un video per il cliente.",
+    play: "Riproduci",
+    pause: "Pausa",
+    exportMp4: "Esporta .mp4",
+    exporting: "Esportazione...",
+    exportReadyMp4: "Video 4D esportato in .mp4",
+    exportReadyWebm: "Esportazione alternativa in .webm (MP4 non supportato)",
+    viewerUnavailable: "Il canvas 3D non è disponibile",
+    recorderUnavailable: "La registrazione video non è supportata in questo browser",
+    stepDuration: "Durata del passo",
+    currentTask: "Fase corrente",
+    predictiveTitle: "Analisi predittiva",
+    predictiveSubtitle: "Controlli automatici di coerenza delle sequenze.",
+    noIssues: "Nessun problema di sequenza rilevato.",
+    issueMissingDates: "Date mancanti o non valide",
+    issueInvalidRange: "La data di fine precede la data di inizio",
+    issueUnknownPredecessor: "Riferimento predecessore sconosciuto",
+    issueUnlinkedTask: "Nessun oggetto 3D collegato",
+    issueOverlap: "Possibile sovrapposizione senza dipendenza",
+  },
+  costing: {
+    ...EN.costing,
+    title: "Stima 5D e controllo costi",
+    subtitle: "Librerie prezzi, quantità automatiche e dashboard finanziaria live.",
+    importBpu: "Importa BPU Excel",
+    importLandXml: "Importa LandXML",
+    marketPricingTitle: "Stime prezzi di mercato",
+    marketPricingSubtitle:
+      "Usa un indice pubblico dei materiali da costruzione per adeguare i prezzi unitari mancanti o importati.",
+    marketPricingSource: "Fonte: FRED / indice Building Material and Supplies Dealers",
+    marketPricingRefresh: "Aggiorna indice di mercato",
+    marketPricingLatest: "Indice più recente",
+    marketPricingEstimate: "Stimato dal mercato",
+    importFailed: "Importazione non riuscita",
+    libraries: "Librerie prezzi",
+    noLibraries: "Nessuna libreria BPU importata ancora",
+    baseCurrency: "Valuta base",
+    threshold: "Soglia di allerta %",
+    quantityAuto: "Quantità automatiche",
+    noQuantities: "Nessuna quantità BIM disponibile",
+    linkBpu: "Collegamento BPU",
+    noLink: "Nessun elemento collegato",
+    budgetEstimated: "Budget stimato",
+    budgetModel: "Budget modello",
+    variance: "Varianza",
+    varianceAlert: "Soglia superata",
+    liveDashboard: "Dashboard finanziaria live",
+    progressTitle: "Allegato digitale",
+    selectedPiece: "Elemento selezionato",
+    noSelection: "Seleziona un elemento nel visualizzatore 3D",
+    progress: "Progresso %",
+    applyProgress: "Applica progresso",
+    validate: "Valida",
+    generatePdf: "Genera PDF",
+    generateXls: "Genera XLS",
+    generated: "Situazione generata",
+    disciplineTitle: "Supporto multi-disciplina nativo",
+    building: "Edificio",
+    structure: "Struttura / MEP",
+    infra: "Infra / VRD",
+    art: "Opera civile",
+    landXmlMetrics: "Metriche LandXML",
+    cutVolume: "Volume scavo",
+    fillVolume: "Volume riempimento",
+    networkLength: "Lunghezza rete",
+    roadArea: "Area strada",
+    quantityCount: "Conteggio",
+    quantityArea: "Area",
+    quantityVolume: "Volume",
+    quantityLength: "Lunghezza",
+    quantityPerimeter: "Perimetro",
   },
 };
 
@@ -641,6 +1263,10 @@ export function getViewerCopy(locale: ViewerLocale) {
       return FR;
     case "de":
       return DE;
+    case "es":
+      return ES;
+    case "it":
+      return IT;
     case "ar":
       return AR;
     default:

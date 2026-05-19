@@ -22,6 +22,7 @@ export type IconName =
   | "zoomIn"
   | "zoomOut"
   | "camera"
+  | "pause"
   | "keyboard"
   | "file"
   | "history"
@@ -195,6 +196,12 @@ export function Icon({ name, className, ...props }: IconProps) {
           <rect x="3" y="7" width="18" height="13" rx="2" />
           <circle cx="12" cy="13.5" r="3.2" />
           <path d="M8 7l1.5-2h5L16 7" />
+        </svg>
+      );
+    case "pause":
+      return (
+        <svg {...DEFAULT_PROPS} className={iconClassName} {...props}>
+          <path d="M8 5v14M16 5v14" />
         </svg>
       );
     case "keyboard":

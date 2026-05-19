@@ -6,23 +6,43 @@ interface KeyboardShortcutsProps {
   onClose: () => void;
 }
 
-const SHORTCUTS = [
-  { keys: "F", action: "Fit camera to model" },
-  { keys: "G", action: "Toggle grid" },
-  { keys: "W", action: "Toggle wireframe" },
-  { keys: "T", action: "Toggle transparency (X-ray)" },
-  { keys: "M", action: "Toggle measurement tool" },
-  { keys: "C", action: "Clear measurements" },
-  { keys: "P", action: "Take screenshot" },
-  { keys: "Esc", action: "Deselect element" },
-  { keys: "?", action: "Show shortcuts" },
-  { keys: "Ctrl+K", action: "Focus search" },
-  { keys: "+", action: "Zoom in" },
-  { keys: "-", action: "Zoom out" },
-  { keys: "1–6", action: "View angles (Top/Front/Right/Back/Left/Bottom)" },
-  { keys: "0", action: "Isometric view" },
-  { keys: "L", action: "Toggle light/dark mode" },
-];
+const SHORTCUT_KEYS = [
+  "fitCamera",
+  "toggleGrid",
+  "toggleWireframe",
+  "toggleTransparency",
+  "toggleMeasure",
+  "clearMeasurements",
+  "screenshot",
+  "deselectElement",
+  "showShortcuts",
+  "focusSearch",
+  "zoomIn",
+  "zoomOut",
+  "viewAngles",
+  "isometricView",
+  "cycleThemes",
+] as const;
+
+type ShortcutKey = (typeof SHORTCUT_KEYS)[number];
+
+const SHORTCUT_MAPPINGS: Record<ShortcutKey, string> = {
+  fitCamera: "F",
+  toggleGrid: "G",
+  toggleWireframe: "W",
+  toggleTransparency: "T",
+  toggleMeasure: "M",
+  clearMeasurements: "C",
+  screenshot: "P",
+  deselectElement: "Esc",
+  showShortcuts: "?",
+  focusSearch: "Ctrl+K",
+  zoomIn: "+",
+  zoomOut: "-",
+  viewAngles: "1–6",
+  isometricView: "0",
+  cycleThemes: "L",
+};
 
 function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
   const { copy } = useAppLanguage();
@@ -40,6 +60,11 @@ function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
 
   if (!open) return null;
 
+  const shortcuts = SHORTCUT_KEYS.map((key) => ({
+    keys: SHORTCUT_MAPPINGS[key],
+    action: copy.shortcuts[key],
+  }));
+
   return (
     <div className="shortcuts-overlay" onClick={onClose}>
       <div className="shortcuts-modal" onClick={(e) => e.stopPropagation()}>
@@ -50,7 +75,7 @@ function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
           </button>
         </div>
         <div className="shortcuts-list">
-          {SHORTCUTS.map((s) => (
+          {shortcuts.map((s) => (
             <div key={s.keys} className="shortcut-row">
               <kbd className="shortcut-key">{s.keys}</kbd>
               <span className="shortcut-action">{s.action}</span>

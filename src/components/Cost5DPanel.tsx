@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import type { ElementQuantityData } from "./IFCViewer";
 import type { SelectedElementData } from "./PropertiesPanel";
 import type { ViewerCopy } from "../utils/viewerI18n";
+import {
+  estimateUnitPrice,
+  fetchBuildingMaterialMarketSnapshot,
+  type MarketSnapshot,
+} from "../utils/marketPricing";
 
 type QuantityBasis = "count" | "area" | "volume" | "length" | "perimeter";
 
@@ -145,6 +150,8 @@ export default function Cost5DPanel({
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>(DEFAULT_RATES);
   const [alertThreshold, setAlertThreshold] = useState(10);
   const [landMetrics, setLandMetrics] = useState<LandXmlMetrics>(DEFAULT_LANDXML);
+  const [marketSnapshot, setMarketSnapshot] = useState<MarketSnapshot | null>(null);
+  const [marketStatus, setMarketStatus] = useState("");
   const [status, setStatus] = useState("");
   const [selectedProgress, setSelectedProgress] = useState(0);
 
@@ -200,6 +207,34 @@ export default function Cost5DPanel({
     allItems.forEach((item) => map.set(item.id, item));
     return map;
   }, [allItems]);
+  const pricedItems = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        effectiveUnitPrice: number;
+        estimatedUnitPrice: number;
+        isEstimated: boolean;
+        profileName: string;
+        sourceLabel: string;
+      }
+    >();
+    allItems.forEach((item) => {
+      const estimate = estimateUnitPrice(
+        `${item.code} ${item.label}`,
+        item.quantityBasis,
+        item.unitPrice,
+        marketSnapshot,
+      );
+      map.set(item.id, {
+        effectiveUnitPrice: item.unitPrice > 0 ? item.unitPrice : estimate.suggested,
+        estimatedUnitPrice: estimate.suggested,
+        isEstimated: item.unitPrice <= 0,
+        profileName: estimate.profileName,
+        sourceLabel: estimate.sourceLabel,
+      });
+    });
+    return map;
+  }, [allItems, marketSnapshot]);
 
   const currencyChoices = useMemo(
     () =>
@@ -209,9 +244,24 @@ export default function Cost5DPanel({
           ...allItems.map((item) => item.currency.toUpperCase()),
           baseCurrency.toUpperCase(),
         ]),
-      ),
+    ),
     [allItems, baseCurrency, exchangeRates],
   );
+
+  const refreshMarketSnapshot = useCallback(async () => {
+    try {
+      const snapshot = await fetchBuildingMaterialMarketSnapshot();
+      setMarketSnapshot(snapshot);
+      setMarketStatus(`${snapshot.latestDate} • ${snapshot.latestValue.toFixed(2)}`);
+    } catch (err) {
+      setMarketSnapshot(null);
+      setMarketStatus(err instanceof Error ? err.message : "Market price index unavailable");
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshMarketSnapshot();
+  }, [refreshMarketSnapshot]);
 
   const toBase = (amount: number, currency: string) => {
     const rate = exchangeRates[currency.toUpperCase()] ?? 1;
@@ -222,6 +272,7 @@ export default function Cost5DPanel({
     const rows = quantities.map((q) => {
       const linkedId = links[q.type];
       const item = linkedId ? itemById.get(linkedId) : undefined;
+      const priced = item ? pricedItems.get(item.id) : undefined;
       if (!item) {
         return {
           ...q,
@@ -238,12 +289,22 @@ export default function Cost5DPanel({
             ? q.volume
             : item.quantityBasis === "length"
               ? q.length
-              : item.quantityBasis === "perimeter"
-                ? q.perimeter
-                : q.count;
-      const modelAmountBase = toBase(quantityUsed * item.unitPrice, item.currency);
-      const estimatedAmountBase = toBase(item.plannedQty * item.unitPrice, item.currency);
-      return { ...q, item, quantityUsed, modelAmountBase, estimatedAmountBase };
+          : item.quantityBasis === "perimeter"
+            ? q.perimeter
+            : q.count;
+      const unitPrice = priced?.effectiveUnitPrice ?? item.unitPrice;
+      const modelAmountBase = toBase(quantityUsed * unitPrice, item.currency);
+      const estimatedAmountBase = toBase(item.plannedQty * unitPrice, item.currency);
+      return {
+        ...q,
+        item,
+        quantityUsed,
+        modelAmountBase,
+        estimatedAmountBase,
+        unitPrice,
+        estimatedUnitPrice: priced?.estimatedUnitPrice ?? unitPrice,
+        isEstimated: priced?.isEstimated ?? false,
+      };
     });
 
     const budgetModel = rows.reduce((acc, row) => acc + row.modelAmountBase, 0);
@@ -251,7 +312,7 @@ export default function Cost5DPanel({
     const variance = budgetModel - budgetEstimated;
     const variancePct = budgetEstimated > 0 ? (Math.abs(variance) / budgetEstimated) * 100 : 0;
     return { rows, budgetModel, budgetEstimated, variance, variancePct };
-  }, [itemById, links, quantities]);
+  }, [itemById, links, pricedItems, quantities]);
 
   const importBpuExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -287,7 +348,8 @@ export default function Cost5DPanel({
             quantityBasis,
           };
         })
-        .filter((item) => item.unitPrice > 0);
+        .filter((item) => item.label.length > 0);
+      const estimatedCount = items.filter((item) => item.unitPrice <= 0).length;
 
       const nextLibrary: PriceLibrary = {
         id: `${Date.now()}-${file.name}`,
@@ -295,7 +357,11 @@ export default function Cost5DPanel({
         items,
       };
       setLibraries((prev) => [nextLibrary, ...prev]);
-      setStatus(`${items.length} items imported from ${file.name}`);
+      setStatus(
+        `${items.length} items imported from ${file.name}${
+          estimatedCount > 0 ? ` (${estimatedCount} market-estimated)` : ""
+        }`,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : copy.importFailed;
       setStatus(`${copy.importFailed}: ${message}`);
@@ -352,6 +418,7 @@ export default function Cost5DPanel({
         const q = getElementQuantity(entry.expressId);
         const linkedItemId = links[entry.type];
         const item = linkedItemId ? itemById.get(linkedItemId) : undefined;
+        const priced = item ? pricedItems.get(item.id) : undefined;
         const quantityBase = q
           ? item?.quantityBasis === "area"
             ? q.area
@@ -361,10 +428,12 @@ export default function Cost5DPanel({
                 ? q.length
                 : item?.quantityBasis === "perimeter"
                   ? q.perimeter
-                  : q.count
+            : q.count
           : 0;
         const doneQty = quantityBase * (entry.progress / 100);
-        const amount = item ? toBase(doneQty * item.unitPrice, item.currency) : 0;
+        const amount = item
+          ? toBase(doneQty * (priced?.effectiveUnitPrice ?? item.unitPrice), item.currency)
+          : 0;
         return {
           expressId: entry.expressId,
           type: entry.type,
@@ -373,9 +442,10 @@ export default function Cost5DPanel({
           quantityDone: Number(doneQty.toFixed(3)),
           amountBase: Number(amount.toFixed(2)),
           itemCode: item?.code ?? "",
+          priceSource: priced?.isEstimated ? copy.marketPricingEstimate : "Imported",
         };
       });
-  }, [getElementQuantity, itemById, links, progressEntries]);
+  }, [copy.marketPricingEstimate, getElementQuantity, itemById, links, pricedItems, progressEntries]);
 
   const generateSituationPdf = () => {
     const doc = new jsPDF();
@@ -430,6 +500,36 @@ export default function Cost5DPanel({
           </label>
         </div>
         <p className="cost5d-status">{status}</p>
+      </section>
+
+      <section className="cost5d-card">
+        <h4>{copy.marketPricingTitle}</h4>
+        <p>{copy.marketPricingSubtitle}</p>
+        <div className="cost5d-market-row">
+          <div className="cost5d-market-source">
+            <span>{copy.marketPricingSource}</span>
+            <strong>
+              {marketSnapshot
+                ? `${marketSnapshot.latestDate} • ${marketSnapshot.latestValue.toFixed(2)}`
+                : marketStatus || copy.importFailed}
+            </strong>
+          </div>
+          <button
+            type="button"
+            className="cost5d-market-refresh"
+            onClick={() => void refreshMarketSnapshot()}
+          >
+            {copy.marketPricingRefresh}
+          </button>
+        </div>
+        <div className="cost5d-market-meta">
+          <span>{copy.marketPricingLatest}: {marketSnapshot?.latestValue.toFixed(2) ?? "--"}</span>
+          <span>
+            {marketSnapshot?.referenceDate
+              ? `${marketSnapshot.referenceDate} → x${marketSnapshot.trendFactor.toFixed(3)}`
+              : "No trend available"}
+          </span>
+        </div>
       </section>
 
       <section className="cost5d-card">
@@ -488,6 +588,7 @@ export default function Cost5DPanel({
                   <span>
                     {copy.quantityCount}: {row.count} | {copy.quantityArea}: {row.area.toFixed(2)} |{" "}
                     {copy.quantityVolume}: {row.volume.toFixed(2)} | {copy.quantityLength}: {row.length.toFixed(2)}
+                    {row.item ? ` | ${row.item.code}: ${row.unitPrice.toFixed(2)} ${row.item.currency}` : ""}
                   </span>
                 </div>
                 <div className="cost5d-link-col">
@@ -500,15 +601,19 @@ export default function Cost5DPanel({
                         [row.type]: e.target.value,
                       }))
                     }
-                  >
-                    <option value="">{copy.noLink}</option>
-                    {allItems.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} - {item.label} ({item.unitPrice} {item.currency}/{item.unit})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    >
+                      <option value="">{copy.noLink}</option>
+                      {allItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.code} - {item.label} (
+                          {(pricedItems.get(item.id)?.effectiveUnitPrice ?? item.unitPrice).toFixed(2)}{" "}
+                          {item.currency}/{item.unit}
+                          {pricedItems.get(item.id)?.isEstimated ? ` • ${copy.marketPricingEstimate}` : ""}
+                          )
+                        </option>
+                      ))}
+                    </select>
+                  </div>
               </div>
             ))}
           </div>

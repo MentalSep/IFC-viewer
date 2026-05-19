@@ -26,13 +26,15 @@ const AppLanguageContext = createContext<AppLanguageContextValue | null>(null);
 
 function detectInitialLocale(): AppLocale {
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "en" || stored === "fr" || stored === "de" || stored === "ar") {
+   if (stored === "en" || stored === "fr" || stored === "de" || stored === "es" || stored === "it" || stored === "ar") {
     return stored;
   }
 
   const browserLang = navigator.language.toLowerCase();
   if (browserLang.startsWith("fr")) return "fr";
   if (browserLang.startsWith("de")) return "de";
+  if (browserLang.startsWith("es")) return "es";
+  if (browserLang.startsWith("it")) return "it";
   if (browserLang.startsWith("ar")) return "ar";
   return "en";
 }

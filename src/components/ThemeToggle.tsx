@@ -23,7 +23,19 @@ function ThemeToggle({ theme, onToggle, label }: ThemeToggleProps) {
         <span className="theme-toggle-track">
           <span className="theme-toggle-thumb">
             <span className="theme-toggle-icon">
-              <Icon name={theme === "dark" ? "moon" : theme === "light" ? "sun" : "palette"} />
+              <Icon
+                name={
+                  theme === "dark"
+                    ? "moon"
+                    : theme === "light"
+                      ? "sun"
+                      : theme === "midnight"
+                        ? "snow"
+                        : theme === "forest"
+                          ? "flame"
+                          : "palette"
+                }
+              />
             </span>
           </span>
         </span>

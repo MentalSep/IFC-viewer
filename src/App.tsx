@@ -7,6 +7,7 @@ import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
 import { ProjectViewer } from "./pages/ProjectViewer";
 import { AppLanguageProvider, useAppLanguage } from "./components/AppLanguage";
+import "./styles/tailwind.css";
 import "./styles/global.css";
 
 function AppRoutes() {

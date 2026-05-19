@@ -10,14 +10,26 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px clamp(20px, 3vw, 40px) 12px;
-  max-width: 100%;
+  margin: 18px clamp(20px, 3vw, 40px) 0;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px rgba(2, 8, 23, 0.18);
 }
 
 .project-shell-copy h1 {
   margin: 0;
   font-size: clamp(22px, 2.6vw, 34px);
   letter-spacing: -0.03em;
+}
+
+.project-shell-subtitle {
+  margin-top: 8px;
+  max-width: 72ch;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .project-shell-kicker {
@@ -33,6 +45,53 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.project-shell-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.project-shell-chip.active {
+  border-color: rgba(0, 216, 164, 0.45);
+  background: rgba(0, 216, 164, 0.16);
+}
+
+.project-shell-rail {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
+  padding: 16px clamp(20px, 3vw, 40px) 0;
+}
+
+.project-shell-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.project-shell-metric {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.project-shell-metric span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.project-shell-metric strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  color: var(--text);
 }
 
 .project-shell-chip,
@@ -68,8 +127,9 @@
   min-height: 0;
   width: 100%;
   overflow: hidden;
-  padding: 0 clamp(20px, 3vw, 40px) 20px;
+  padding: 16px clamp(20px, 3vw, 40px) 20px;
   gap: 16px;
+  align-items: stretch;
 }
 
 .project-left-sidebar {
@@ -79,6 +139,9 @@
   background: color-mix(in srgb, var(--panel) 82%, transparent);
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  border-radius: 24px;
+  box-shadow: 0 18px 48px rgba(2, 8, 23, 0.14);
 }
 
 .project-sidebar-controls {
@@ -86,6 +149,7 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .project-sidebar-toggle-btn {
@@ -103,6 +167,7 @@
   flex-direction: column;
   position: relative;
   min-width: 0;
+  min-height: 0;
 }
 
 .project-open-left-btn,
@@ -130,13 +195,16 @@
 }
 
 .project-toolbar-row {
-  min-height: 64px;
-  border-bottom: 1px solid var(--border);
-  padding: 0 10px;
+  min-height: 0;
+  padding: 0 0 12px;
   display: flex;
-  align-items: center;
-  background: color-mix(in srgb, var(--panel-2) 84%, transparent);
-  overflow: auto;
+  align-items: flex-start;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 96%, transparent), transparent);
+  overflow: visible;
+  margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .project-viewer-row {
@@ -144,18 +212,34 @@
   display: flex;
   overflow: hidden;
   min-height: 0;
+  gap: 16px;
+  align-items: stretch;
 }
 
 .project-viewer-canvas {
   flex: 1;
   position: relative;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .project-viewer-canvas-host {
   position: relative;
+  flex: 1;
   width: 100%;
-  height: 100%;
+  min-height: 0;
+}
+
+.project-canvas-overlays {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 10;
+  display: grid;
+  gap: 12px;
+  pointer-events: none;
 }
 
 .project-right-sidebar {
@@ -166,6 +250,9 @@
   flex-direction: column;
   overflow: hidden;
   animation: viewerSlideIn 220ms ease;
+  min-height: 0;
+  border-radius: 24px;
+  box-shadow: 0 18px 48px rgba(2, 8, 23, 0.14);
 }
 
 .project-right-sidebar-header {
@@ -199,6 +286,63 @@
 .project-right-content {
   flex: 1;
   overflow: auto;
+}
+
+.project-right-content.workspace-right-split,
+.project-right-content.workspace-right-compare,
+.project-right-content.workspace-right-multi {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.project-right-content.workspace-right-split {
+  grid-template-columns: 1fr;
+}
+
+.project-right-content.workspace-right-compare {
+  grid-template-columns: 1fr;
+}
+
+.project-right-content.workspace-right-multi {
+  grid-template-columns: 1fr;
+}
+
+.workspace-aux-panel,
+.workspace-main-panel,
+.workspace-secondary-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.workspace-secondary-stack {
+  padding: 12px;
+}
+
+.workspace-aux-panel {
+  padding: 12px 12px 0;
+}
+
+.project-right-content.workspace-right-compare .workspace-aux-panel,
+.project-right-content.workspace-right-compare .workspace-main-panel,
+.project-right-content.workspace-right-split .workspace-aux-panel,
+.project-right-content.workspace-right-split .workspace-main-panel,
+.project-right-content.workspace-right-multi .workspace-aux-panel,
+.project-right-content.workspace-right-multi .workspace-main-panel {
+  height: fit-content;
+}
+
+.project-right-content.workspace-right-split .workspace-aux-panel,
+.project-right-content.workspace-right-compare .workspace-aux-panel,
+.project-right-content.workspace-right-multi .workspace-aux-panel {
+  padding-bottom: 0;
+}
+
+.project-dock-resizer {
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
 }
 
 .project-empty-properties {
@@ -459,6 +603,47 @@
   color: var(--text);
 }
 
+.cost5d-market-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cost5d-market-source {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cost5d-market-source strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.cost5d-market-refresh {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.cost5d-market-meta {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .cost5d-settings {
   margin-top: 10px;
   display: flex;
@@ -657,6 +842,10 @@
     flex-direction: column;
   }
 
+  .project-shell-rail {
+    grid-template-columns: 1fr;
+  }
+
   .project-layout {
     flex-direction: column;
     min-height: auto;
@@ -675,6 +864,10 @@
   .project-topbar-btn {
     display: none;
   }
+
+  .project-viewer-row {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 760px) {
@@ -684,5 +877,9 @@
 
   .project-shell-actions {
     width: 100%;
+  }
+
+  .project-shell-rail {
+    grid-template-columns: 1fr;
   }
 }

@@ -4,10 +4,12 @@ A modern web application to load and explore IFC (Industry Foundation Classes) b
 
 ## Features
 
-- 📁 **Drag & Drop / File Upload**: Load your own IFC files
+- 📁 **Drag & Drop / File Upload**: Load your own IFC, `.dwg`, and other supported 3D model files
 - 🏗️ **Sample Model**: Quickly try the viewer with the included sample file
 - 🌐 **Interactive 3D**: Rotate, pan, zoom, and select elements
 - 🎨 **Modern UI**: Clean dark-themed interface
+- 🌈 **Theme Cycling**: Switch across multiple visual themes
+- 💰 **Market Estimates**: Auto-estimate missing prices from public market data
 
 ## Getting Started
 
