@@ -203,15 +203,253 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* spacing scale */
+  --space-0: 4px;
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 20px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+
+  /* typography scale */
+  --font-size-base: 15.5px; /* slightly larger for readability */
+  --font-size-sm: 13.5px;
+  --font-size-md: 15.5px;
+  --font-size-lg: 18.5px;
+  --font-size-xl: 24px;
+  --line-height-base: 1.48;
+}
+
 html,
 body {
   width: 100%;
   height: 100%;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: var(--font-size-base);
 }
 
 body {
   margin: 0;
+}
+
+/* ── UI system: unified cards, buttons, inputs, and spacing ── */
+:root {
+  --card-radius: 16px; /* slightly rounder */
+  --card-padding: 20px; /* more breathing room */
+  --card-shadow: 0 18px 48px rgba(2,8,23,0.18); /* softer, larger shadow */
+  --glass-bg: color-mix(in srgb, var(--panel) 78%, transparent);
+  --control-bg: color-mix(in srgb, var(--panel-2) 86%, transparent);
+}
+
+/* Panels / cards */
+.panel,
+.card,
+.viewer-panel,
+.right-panel > .panel,
+.props-panel,
+.project-shell-header,
+.project-shell-metric,
+.project-left-sidebar,
+.project-right-sidebar,
+.floating-tool-palette,
+.workspace-presence,
+.minimap-navigator {
+  background: var(--glass-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  box-shadow: var(--card-shadow);
+}
+
+/* Standardize headings inside panels */
+.panel h1,
+.panel h2,
+.panel h3,
+.props-header h3,
+.sidebar-header h1 {
+  margin: 0 0 8px 0;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.panel p, .panel .muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Button system */
+.btn,
+.button,
+.project-shell-chip,
+.sidebar-pill,
+.tab-btn,
+.project-sidebar-toggle-btn,
+.project-open-left-btn,
+.project-open-right-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.btn:hover,
+.button:hover,
+.tab-btn:hover,
+.sidebar-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(2,8,23,0.12);
+}
+
+/* Primary / accent variant */
+.btn-primary,
+.button.primary {
+  background: linear-gradient(120deg, rgba(0,216,164,0.12), rgba(56,189,248,0.08));
+  border-color: rgba(0,216,164,0.18);
+}
+
+/* Inputs */
+input, textarea, select, .chat-input, .search-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 6px 20px rgba(6,182,212,0.06); }
+
+/* Icons */
+.ui-icon, .action-icon svg { color: var(--text); }
+
+/* Lists and tree */
+.model-tree-list { max-height: calc(100vh - 420px); }
+
+/* Make sure canvas area remains full bleed and panels don't overlap */
+.project-viewer-canvas { padding: var(--space-3); min-height: 480px; }
+.canvas-wrapper { border-radius: 12px; overflow: hidden; }
+
+/* Tooltips */
+.compact-tooltip { font-size: 13px; }
+
+/* Panel utility classes for newly added components */
+.panel-header { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--border); padding-bottom:8px; }
+.panel-subtitle { font-size: var(--font-size-sm); color: var(--muted); margin:0 }
+.panel-meta { font-size: 12px; color: var(--muted); }
+.panel-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); font-weight:600; cursor:pointer; transition:all 140ms ease; }
+.panel-btn.panel-btn-compact { padding:6px 10px; border-radius:999px; font-size:13px }
+.panel-pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:color-mix(in srgb,var(--panel) 76%, transparent); color:var(--text); font-weight:700 }
+.panel-list-item { border-radius:12px; border:1px solid var(--border); background:var(--input-bg); padding:10px; transition:background 140ms ease, transform 120ms ease }
+.panel-list-item:hover { background:var(--hover-bg); transform:translateY(-2px) }
+.panel-input { width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); outline:none }
+.panel-chip { border-radius:999px; padding:6px 10px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); font-size:13px }
+.panel-compact-action { border-radius:10px; padding:8px; border:1px solid var(--border); background:transparent; display:inline-flex; align-items:center; justify-content:center }
+.panel-compact-action.active { border-color: var(--accent); background: color-mix(in srgb,var(--accent) 10%, transparent) }
+.panel-user-card { display:flex; gap:12px; align-items:center; border-radius:12px; padding:10px; border:1px solid var(--border); background:var(--input-bg) }
+.panel-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,0.12); border:1px solid var(--border); color:var(--text); font-size:12px }
+.panel-grid { display:grid; gap:10px }
+.panel-range { appearance:none; height:8px; border-radius:999px; background:rgba(255,255,255,0.06); width:100% }
+.panel-pill.active { background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--text); }
+.panel-list-item.active { border-color: color-mix(in srgb, var(--accent) 18%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+.presence-avatar { display:inline-flex; align-items:center; justify-content:center; height:40px; width:40px; border-radius:999px; font-weight:700; color:var(--panel); }
+.panel-username { font-size:14px; font-weight:700; color:var(--text); margin:0 }
+.panel-user-meta { font-size:13px; color:var(--muted); margin:0 }
+
+.panel-item-title { font-size:14px; font-weight:600; color:var(--text); margin:0 }
+.panel-item-meta { font-size:13px; color:var(--muted); margin:0 }
+
+.heatmap-bar { display:flex; height:12px; overflow:hidden; border-radius:999px }
+.heatmap-bar > span { flex:1 }
+
+/* Small screens adjustments */
+@media (max-width: 980px) {
+  .project-left-sidebar, .project-right-sidebar { width: 300px; }
+  .panel, .props-panel { padding: 12px; }
+  .floating-tool-palette { width: auto; }
+}
+
+/* Minimap specific enhancements: larger canvas, clearer dots and camera marker, and breathing room */
+.minimap-navigator {
+  width: 320px; /* slightly wider for better readability */
+  padding: 22px; /* more breathing room */
+}
+
+.minimap-canvas {
+  height: 180px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 86%, transparent), color-mix(in srgb, var(--panel-2) 86%, transparent));
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.minimap-dots {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  opacity: 0.78;
+}
+
+.minimap-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+.minimap-camera-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.35), 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.minimap-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+/* make panel-list-item more airy inside minimap */
+.minimap-navigator .panel-list-item { padding: 12px; border-radius: 10px; }
+
+@media (max-width: 640px) {
+  .minimap-navigator { width: auto; }
+  .minimap-canvas { height: 140px; }
+}
+
+/* DEBUG: visual badge to confirm the updated global CSS is loaded in the browser */
+body::after {
+  content: "CoBIM styles loaded";
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  background: rgba(6,182,212,0.14);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(6,182,212,0.22);
+  font-size: 12px;
+  z-index: 99999;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
 }
 
 a {
@@ -242,9 +480,9 @@ a {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 280px 1fr 300px;
-  gap: 16px;
-  padding: 20px 22px 26px;
+  grid-template-columns: 300px 1fr 300px; /* balanced sidebars */
+  gap: 18px;
+  padding: 20px 26px 28px;
   min-height: 100vh;
 }
 
@@ -263,9 +501,9 @@ a {
 .panel {
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  box-shadow: var(--card-shadow);
   overflow-y: auto;
   max-height: calc(100vh - 40px);
   scrollbar-width: thin;
@@ -277,15 +515,17 @@ a {
 }
 
 .panel h1 {
-  margin: 0 0 6px;
-  font-size: 22px;
+  margin: 0 0 8px;
+  font-size: var(--font-size-xl);
   letter-spacing: -0.01em;
+  line-height: 1.08;
 }
 
 .panel p {
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
 }
 
 .controls {
@@ -785,19 +1025,25 @@ a {
   position: absolute;
   bottom: 60px;
   left: 16px;
-  width: 280px;
-  max-height: 320px;
+  width: 320px;
+  max-height: 420px;
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 14px;
+  padding: 16px;
   z-index: 5;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
   animation: props-slide-up 180ms ease-out;
 }
+
+.props-header h3 { font-size: 16px; margin: 0; font-weight: 700; }
+.props-section { margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 12px; }
+.props-row { display:flex; gap: 8px; align-items:center; justify-content:space-between; }
+.props-label { font-size: 13px; color: var(--muted); }
+.props-value { font-size: 14px; color: var(--text); font-weight:600; }
 
 @keyframes props-slide-up {
   from {

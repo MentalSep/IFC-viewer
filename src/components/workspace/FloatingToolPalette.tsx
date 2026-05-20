@@ -36,37 +36,63 @@ export function FloatingToolPalette({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileDrag={{ scale: 1.01, opacity: 0.98 }}
-      className="pointer-events-auto rounded-3xl border border-white/10 bg-slate-950/75 p-3 shadow-glow backdrop-blur-xl"
+      className="panel floating-tool-palette pointer-events-auto"
       aria-label="Tool palette"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
+      <div className="panel-header">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-cyan-200/70">
+          <p className="panel-subtitle">
             {copy.commandPaletteTitle}
           </p>
-          <h3 className="text-sm font-semibold text-slate-100">{copy.commandPaletteSubtitle}</h3>
+          <h3>{copy.commandPaletteSubtitle}</h3>
         </div>
         <button
           type="button"
           onClick={onToggleCollapsed}
-          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/10"
+          className="panel-btn panel-btn-compact"
         >
           {collapsed ? copy.expand : copy.collapse}
         </button>
       </div>
 
+      {/* Compact icon-only mode when collapsed */}
       <AnimatePresence mode="wait">
-        {!collapsed && (
+        {collapsed ? (
+          <motion.div
+            key="palette-compact"
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "64px" }}
+            exit={{ opacity: 0, width: 0 }}
+            className="palette-compact panel-grid"
+          >
+            {groups.flatMap((g) => g.actions).map((action) => (
+              <div key={action.id} className="compact-action-wrap" style={{ position: 'relative' }}>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={action.onClick}
+                  title={action.label}
+                  className={`panel-compact-action ${action.active ? 'active' : ''}`}
+                  aria-label={action.label}
+                >
+                  <Icon name={action.icon} />
+                </motion.button>
+                <span className="compact-tooltip" role="status" aria-hidden>{action.label}</span>
+              </div>
+            ))}
+          </motion.div>
+        ) : (
           <motion.div
             key="palette-body"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 grid gap-3"
+            className="panel-grid"
           >
             {groups.map((group) => (
-              <div key={group.title} className="rounded-2xl border border-white/8 bg-white/5 p-2">
-                <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-400">
+              <div key={group.title} className="panel-group">
+                <p className="panel-subtitle">
                   {group.title}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
@@ -78,16 +104,12 @@ export function FloatingToolPalette({
                       whileTap={{ scale: 0.98 }}
                       onClick={action.onClick}
                       title={action.label}
-                      className={`group flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition ${
-                        action.active
-                          ? "border-cyan-400/40 bg-cyan-400/15 text-cyan-100"
-                          : "border-white/10 bg-slate-900/50 text-slate-200 hover:border-cyan-400/30 hover:bg-white/10"
-                      }`}
+                      className={`panel-action-btn ${action.active ? 'active' : ''}`}
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/8 text-base transition group-hover:bg-white/12">
+                      <span className="action-icon flex h-8 w-8 items-center justify-center rounded-lg bg-white/6 text-base transition">
                         <Icon name={action.icon} />
                       </span>
-                      <span className="font-medium">{action.label}</span>
+                      <span className="action-label font-medium">{action.label}</span>
                     </motion.button>
                   ))}
                 </div>

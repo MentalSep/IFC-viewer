@@ -27,12 +27,12 @@ export function WorkspaceActivityFeed({ items, copy }: WorkspaceActivityFeedProp
     <motion.div
       initial={{ opacity: 0, x: 14 }}
       animate={{ opacity: 1, x: 0 }}
-      className="rounded-3xl border border-white/10 bg-slate-950/75 p-4 shadow-glow backdrop-blur-xl"
+      className="panel"
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="panel-header">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-cyan-200/70">{copy.activityTitle}</p>
-          <h3 className="text-sm font-semibold text-slate-100">{copy.activitySubtitle}</h3>
+          <p className="panel-subtitle">{copy.activityTitle}</p>
+          <h3>{copy.activitySubtitle}</h3>
         </div>
         <Icon name="bolt" className="text-cyan-200" />
       </div>
@@ -46,16 +46,14 @@ export function WorkspaceActivityFeed({ items, copy }: WorkspaceActivityFeedProp
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="rounded-2xl border border-white/10 bg-white/5 p-3"
+              className="panel-list-item"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${badgeStyles[item.kind]}`}>
-                  {copy.activityKinds[item.kind]}
-                </span>
-                <span className="text-xs text-slate-400">{item.time}</span>
+                <span className={`panel-badge ${badgeStyles[item.kind]}`}>{copy.activityKinds[item.kind]}</span>
+                <span className="panel-item-meta">{item.time}</span>
               </div>
-              <p className="text-sm font-medium text-slate-100">{item.title}</p>
-              <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
+              <p className="panel-item-title">{item.title}</p>
+              <p className="mt-1 panel-item-meta">{item.subtitle}</p>
             </motion.div>
           ))}
         </AnimatePresence>

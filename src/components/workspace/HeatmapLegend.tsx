@@ -22,11 +22,11 @@ export function HeatmapLegend({ mode, onModeChange, copy }: HeatmapLegendProps) 
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-white/10 bg-slate-950/75 p-4 shadow-glow backdrop-blur-xl"
+      className="panel"
     >
       <div className="mb-3">
         <p className="text-[10px] uppercase tracking-[0.24em] text-cyan-200/70">{copy.heatmapTitle}</p>
-        <h3 className="text-sm font-semibold text-slate-100">{copy.heatmapSubtitle}</h3>
+        <h3>{copy.heatmapSubtitle}</h3>
       </div>
       <div className="grid gap-2">
         {MODES.map((item) => (
@@ -34,14 +34,10 @@ export function HeatmapLegend({ mode, onModeChange, copy }: HeatmapLegendProps) 
             key={item.id}
             type="button"
             onClick={() => onModeChange(item.id)}
-            className={`rounded-2xl border px-3 py-2 text-left text-xs transition ${
-              mode === item.id
-                ? "border-cyan-400/40 bg-cyan-400/15 text-cyan-100"
-                : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/8"
-            }`}
+            className={`panel-list-item ${mode === item.id ? 'active' : ''}` }
           >
             <span className="mb-2 block font-medium">{copy.heatmapModes[item.id]}</span>
-            <span className="flex h-2 overflow-hidden rounded-full">
+            <span className="heatmap-bar">
               {item.colors.map((color) => (
                 <span key={color} className="flex-1" style={{ backgroundColor: color }} />
               ))}

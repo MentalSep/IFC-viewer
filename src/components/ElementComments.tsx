@@ -90,8 +90,13 @@ function ElementComments({
   const [priority, setPriority] = useState<"info" | "warning" | "critical">(
     "info",
   );
-  const [filterMode, setFilterMode] = useState<"element" | "all">("element");
+  const [filterMode, setFilterMode] = useState<"element" | "all">(
+    selectedExpressId === null ? "all" : "element",
+  );
   const listEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setFilterMode(selectedExpressId === null ? "all" : "element");
+  }, [selectedExpressId]);
   const filtered =
     filterMode === "element" && selectedExpressId !== null
       ? comments.filter((c) => c.expressId === selectedExpressId)
@@ -161,9 +166,11 @@ function ElementComments({
       <div className="elem-comments-list">
         {filtered.length === 0 && (
           <p className="elem-comments-empty">
-            {selectedExpressId === null
+            {comments.length === 0
               ? copy.comments.selectElementPrompt
-              : copy.comments.noCommentsOnElement}
+              : selectedExpressId === null
+                ? copy.comments.tabAll
+                : copy.comments.noCommentsOnElement}
           </p>
         )}
         {filtered.map((c) => {

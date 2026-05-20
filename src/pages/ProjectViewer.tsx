@@ -4,7 +4,6 @@ import { useAuthStore } from "../services/state/useAuthStore";
 import { Navbar } from "../components/Navbar";
 import { AppFooter } from "../components/AppFooter";
 import IFCViewer, { type IFCViewerRef } from "../components/IFCViewer";
-import Sidebar from "../components/Sidebar";
 import PropertiesPanel from "../components/PropertiesPanel";
 import Chat from "../components/Chat";
 import type { ChatMessage } from "../components/Chat";
@@ -23,11 +22,19 @@ import Planning4DPanel, {
 import Cost5DPanel from "../components/Cost5DPanel";
 import { FloatingToolPalette } from "../components/workspace/FloatingToolPalette";
 import { MiniMapNavigator } from "../components/workspace/MiniMapNavigator";
+import { QuickStatsOverlay } from "../components/workspace/QuickStatsOverlay";
+import { ActiveToolIndicator } from "../components/workspace/ActiveToolIndicator";
+import { FPSOverlay } from "../components/workspace/FPSOverlay";
+import { Breadcrumbs } from "../components/workspace/Breadcrumbs";
 import { WorkspacePresence } from "../components/workspace/WorkspacePresence";
 import { WorkspaceActivityFeed, type WorkspaceActivityItem } from "../components/workspace/WorkspaceActivityFeed";
 import { WorkspaceTimeline } from "../components/workspace/WorkspaceTimeline";
 import { BimSearchPanel, type BimSearchResult } from "../components/workspace/BimSearchPanel";
 import { HeatmapLegend, type HeatmapMode } from "../components/workspace/HeatmapLegend";
+
+import { ToolDock } from "../components/ui/ToolDock";
+import { HUD } from "../components/ui/HUD";
+import { ContextInspector } from "../components/ui/ContextInspector";
 import {
   addDoc,
   collection,
@@ -49,26 +56,18 @@ import "../styles/pages/project-viewer.css";
 const LAST_PROJECT_KEY = "ifc_last_project_id";
 const PROJECT_SESSION_PREFIX = "ifc_project_session_";
 
-type RightPanelTab =
-  | "properties"
-  | "comments"
-  | "documents"
-  | "planning"
-  | "costing"
-  | "search"
-  | "feed"
-  | "timeline"
-  | "heatmap";
+type UIMode = "VIEW" | "SELECT" | "ANALYSIS" | "SIMULATION";
+type ActivePanel = "NONE" | "NAVIGATION" | "CONTEXT";
+type ActiveTool = "ORBIT" | "SELECT" | "PAN" | "MEASURE" | "HEATMAP";
 
 interface ProjectSessionState {
   theme: ViewerTheme;
   workspaceMode: WorkspaceMode;
+  uiMode: UIMode;
+  activePanel: ActivePanel;
+  activeTool: ActiveTool;
+  hudEnabled: boolean;
   heatmapMode: HeatmapMode;
-  leftDockWidth: number;
-  rightDockWidth: number;
-  showLeftSidebar: boolean;
-  showRightSidebar: boolean;
-  rightPanelTab: RightPanelTab;
   searchQuery: string;
   userRole: ProfessionalRole;
 }
@@ -140,19 +139,14 @@ export function ProjectViewer() {
   const [status, setStatus] = useState("");
   const [loadTimeMs, setLoadTimeMs] = useState<number | null>(null);
   const [elementTypes, setElementTypes] = useState<ElementTypeInfo[]>([]);
-  const [selectedElement, setSelectedElement] =
-    useState<SelectedElementData | null>(null);
 
   const [theme, setTheme] = useState<ViewerTheme>("dark");
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("single");
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("none");
-  const [toolPaletteCollapsed, setToolPaletteCollapsed] = useState(false);
   const [timelineProgress, setTimelineProgress] = useState(0);
   const [timelinePlaying, setTimelinePlaying] = useState(false);
   const [timelineSpeed, setTimelineSpeed] = useState(1);
   const [activeFloor, setActiveFloor] = useState("ground");
-  const [leftDockWidth, setLeftDockWidth] = useState(330);
-  const [rightDockWidth, setRightDockWidth] = useState(340);
   const [wireframeActive, setWireframeActive] = useState(false);
   const [gridActive, setGridActive] = useState(true);
   const [xrayActive, setXrayActive] = useState(false);
@@ -160,14 +154,28 @@ export function ProjectViewer() {
   const [clippingActive, setClippingActive] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
-  const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>("properties");
   const [isolatedType, setIsolatedType] = useState<string | null>(null);
   const [comments, setComments] = useState<ElementComment[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userRole, setUserRole] = useState<ProfessionalRole>("Architect");
+  const [uiState, setUiState] = useState<{
+    mode: UIMode;
+    activePanel: ActivePanel;
+    activeTool: ActiveTool;
+    hudEnabled: boolean;
+    navigatorCompact: boolean;
+    selection: SelectedElementData | null;
+  }>({
+    mode: "VIEW",
+    activePanel: "NONE",
+    activeTool: "ORBIT",
+    hudEnabled: false,
+    navigatorCompact: true,
+    selection: null,
+  });
+  const selectedElement = uiState.selection;
   const loadStatusTimerRef = useRef<number | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const viewerCanvasHostRef = useRef<HTMLDivElement | null>(null);
   const [cameraState, setCameraState] = useState<null | { position: { x:number;y:number;z:number }; target?: { x:number;y:number;z:number } }>(null);
   useEffect(() => {
@@ -199,7 +207,7 @@ export function ProjectViewer() {
       size: (file.size / 1024 / 1024).toFixed(2) + " MB",
     });
     setStatus(copy.shell.statusLoading);
-    setSelectedElement(null);
+    setUiState((current) => ({ ...current, selection: null, mode: "VIEW", activePanel: "CONTEXT" }));
 
     loadStatusTimerRef.current = window.setTimeout(() => {
       const endTime = performance.now();
@@ -222,7 +230,12 @@ export function ProjectViewer() {
 
   const handleElementSelected = useCallback(
     (data: SelectedElementData | null) => {
-      setSelectedElement(data);
+      setUiState((current) => ({
+        ...current,
+        selection: data,
+        mode: data ? "SELECT" : "VIEW",
+        activePanel: "CONTEXT",
+      }));
     },
     [],
   );
@@ -275,7 +288,7 @@ export function ProjectViewer() {
   }, []);
   const handleHideSelected = useCallback(() => {
     ifcViewerRef.current?.hideSelected();
-    setSelectedElement(null);
+    setUiState((current) => ({ ...current, selection: null }));
   }, []);
   const handleShowAllElements = useCallback(() => {
     ifcViewerRef.current?.showAllElements();
@@ -286,7 +299,7 @@ export function ProjectViewer() {
     setLoadedFile(null);
     setLoadedInfo(null);
     setElementTypes([]);
-    setSelectedElement(null);
+    setUiState((current) => ({ ...current, selection: null, mode: "VIEW", activePanel: "CONTEXT", activeTool: "ORBIT", hudEnabled: false }));
     setLoadTimeMs(null);
     setStatus(copy.shell.statusReady);
     setIsolatedType(null);
@@ -303,6 +316,49 @@ export function ProjectViewer() {
   const handleToggleLocale = useCallback(() => {
     cycleLocale();
   }, [cycleLocale]);
+
+  const handleUploadClick = useCallback(() => {
+    uploadInputRef.current?.click();
+  }, []);
+
+  const handleUploadInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0];
+      if (file) handleFileSelected(file);
+      event.currentTarget.value = "";
+    },
+    [handleFileSelected],
+  );
+
+  const handleUiModeChange = useCallback((mode: UIMode) => {
+    setUiState((current) => ({
+      ...current,
+      mode,
+      activeTool:
+        mode === "ANALYSIS"
+          ? "HEATMAP"
+          : mode === "SIMULATION"
+            ? current.activeTool
+            : mode === "SELECT"
+              ? "SELECT"
+              : "ORBIT",
+      hudEnabled: mode !== "VIEW",
+      activePanel: "CONTEXT",
+    }));
+  }, []);
+
+  const handleToggleNavigatorCompact = useCallback(() => {
+    setUiState((current) => ({ ...current, navigatorCompact: !current.navigatorCompact }));
+  }, []);
+
+  const handleUiToolChange = useCallback((activeTool: ActiveTool) => {
+    setUiState((current) => ({
+      ...current,
+      activeTool,
+      mode: activeTool === "HEATMAP" ? "ANALYSIS" : activeTool === "MEASURE" ? "SELECT" : current.mode,
+      hudEnabled: activeTool !== "ORBIT",
+    }));
+  }, []);
 
   const handleElementTypeClick = useCallback((type: string) => {
     if (isolatedType === type) {
@@ -327,7 +383,7 @@ export function ProjectViewer() {
       });
     }, 150);
     return () => clearTimeout(timerId);
-  }, [showLeftSidebar, showRightSidebar]);
+  }, [uiState.activePanel, uiState.mode]);
 
   useEffect(() => {
     return () => {
@@ -351,12 +407,6 @@ export function ProjectViewer() {
         setTheme(restoredTheme);
         document.documentElement.setAttribute("data-theme", restoredTheme);
       }
-      if (typeof parsed.showLeftSidebar === "boolean") {
-        setShowLeftSidebar(parsed.showLeftSidebar);
-      }
-      if (typeof parsed.showRightSidebar === "boolean") {
-        setShowRightSidebar(parsed.showRightSidebar);
-      }
       if (
         parsed.workspaceMode === "single" ||
         parsed.workspaceMode === "split" ||
@@ -374,24 +424,22 @@ export function ProjectViewer() {
       ) {
         setHeatmapMode(parsed.heatmapMode);
       }
-      if (typeof parsed.leftDockWidth === "number") {
-        setLeftDockWidth(parsed.leftDockWidth);
-      }
-      if (typeof parsed.rightDockWidth === "number") {
-        setRightDockWidth(parsed.rightDockWidth);
-      }
       if (
-        parsed.rightPanelTab === "properties" ||
-        parsed.rightPanelTab === "comments" ||
-        parsed.rightPanelTab === "documents" ||
-        parsed.rightPanelTab === "planning" ||
-        parsed.rightPanelTab === "costing" ||
-        parsed.rightPanelTab === "search" ||
-        parsed.rightPanelTab === "feed" ||
-        parsed.rightPanelTab === "timeline" ||
-        parsed.rightPanelTab === "heatmap"
+        parsed.uiMode === "VIEW" ||
+        parsed.uiMode === "SELECT" ||
+        parsed.uiMode === "ANALYSIS" ||
+        parsed.uiMode === "SIMULATION"
       ) {
-        setRightPanelTab(parsed.rightPanelTab);
+        setUiState((current) => ({ ...current, mode: parsed.uiMode ?? current.mode }));
+      }
+      if (parsed.activePanel === "NONE" || parsed.activePanel === "NAVIGATION" || parsed.activePanel === "CONTEXT") {
+        setUiState((current) => ({ ...current, activePanel: parsed.activePanel ?? current.activePanel }));
+      }
+      if (parsed.activeTool === "ORBIT" || parsed.activeTool === "SELECT" || parsed.activeTool === "PAN" || parsed.activeTool === "MEASURE" || parsed.activeTool === "HEATMAP") {
+        setUiState((current) => ({ ...current, activeTool: parsed.activeTool ?? current.activeTool }));
+      }
+      if (typeof parsed.hudEnabled === "boolean") {
+        setUiState((current) => ({ ...current, hudEnabled: parsed.hudEnabled ?? current.hudEnabled }));
       }
       if (typeof parsed.searchQuery === "string") {
         setSearchQuery(parsed.searchQuery);
@@ -409,12 +457,11 @@ export function ProjectViewer() {
     const sessionState: ProjectSessionState = {
       theme,
       workspaceMode,
+      uiMode: uiState.mode,
+      activePanel: uiState.activePanel,
+      activeTool: uiState.activeTool,
+      hudEnabled: uiState.hudEnabled,
       heatmapMode,
-      leftDockWidth,
-      rightDockWidth,
-      showLeftSidebar,
-      showRightSidebar,
-      rightPanelTab,
       searchQuery,
       userRole,
     };
@@ -426,12 +473,11 @@ export function ProjectViewer() {
     projectId,
     theme,
     workspaceMode,
+    uiState.mode,
+    uiState.activePanel,
+    uiState.activeTool,
+    uiState.hudEnabled,
     heatmapMode,
-    leftDockWidth,
-    rightDockWidth,
-    showLeftSidebar,
-    showRightSidebar,
-    rightPanelTab,
     searchQuery,
     userRole,
   ]);
@@ -539,34 +585,6 @@ export function ProjectViewer() {
     (expressId: number) => ifcViewerRef.current?.getElementQuantity(expressId) ?? null,
     [],
   );
-
-  const startDockResize = useCallback((side: "left" | "right") => {
-    return (event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      const startX = event.clientX;
-      const startLeft = leftDockWidth;
-      const startRight = rightDockWidth;
-
-      const handleMove = (moveEvent: MouseEvent) => {
-        const delta = moveEvent.clientX - startX;
-        if (side === "left") {
-          setLeftDockWidth(Math.max(260, Math.min(420, startLeft + delta)));
-        } else {
-          setRightDockWidth(Math.max(300, Math.min(500, startRight - delta)));
-        }
-      };
-
-      const handleUp = () => {
-        window.removeEventListener("mousemove", handleMove);
-        window.removeEventListener("mouseup", handleUp);
-        document.body.style.cursor = "";
-      };
-
-      document.body.style.cursor = "col-resize";
-      window.addEventListener("mousemove", handleMove);
-      window.addEventListener("mouseup", handleUp);
-    };
-  }, [leftDockWidth, rightDockWidth]);
 
   const handleFloorChange = useCallback((floorId: string) => {
     setActiveFloor(floorId);
@@ -729,397 +747,145 @@ export function ProjectViewer() {
           <p className="project-shell-subtitle">{copy.shell.subtitle}</p>
         </div>
         <div className="project-shell-actions">
+          <button type="button" className="project-shell-chip" onClick={handleUploadClick}>
+            + Upload
+          </button>
           <button type="button" className="project-shell-chip" onClick={handleToggleLocale}>
             {copy.localeLabel}: {copy.localeNames[locale]}
           </button>
           <button type="button" className="project-shell-chip" onClick={handleToggleTheme}>
             {copy.themeLabel}: {copy.themeNames[theme]}
           </button>
-          <div className="project-shell-pill-group">
-            {(["single", "split", "compare", "multi"] as WorkspaceMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className={`project-shell-chip ${workspaceMode === mode ? "active" : ""}`}
-                onClick={() => setWorkspaceMode(mode)}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
+          <button type="button" className="project-shell-chip" onClick={() => setUiState((current) => ({ ...current, activePanel: "NAVIGATION" }))}>
+            Navigator
+          </button>
+          <button type="button" className="project-shell-chip" onClick={() => setUiState((current) => ({ ...current, activePanel: "CONTEXT" }))}>
+            Inspector
+          </button>
+          <button type="button" className="project-shell-chip" onClick={() => handleUiModeChange("VIEW")}>View</button>
+          <button type="button" className="project-shell-chip" onClick={() => handleUiModeChange("SELECT")}>Select</button>
+          <button type="button" className="project-shell-chip" onClick={() => handleUiModeChange("ANALYSIS")}>Analysis / 5D</button>
+          <button type="button" className="project-shell-chip" onClick={() => handleUiModeChange("SIMULATION")}>4D Timeline</button>
+          <span className="project-shell-status">{uiState.mode}</span>
           <span className="project-shell-status">{status || copy.shell.statusReady}</span>
         </div>
       </section>
-
-      <section className="project-shell-rail">
-        <WorkspacePresence users={presenceUsers} />
-        <div className="project-shell-metrics">
-          <div className="project-shell-metric">
-            <span>Model types</span>
-            <strong>{elementTypes.length}</strong>
-          </div>
-          <div className="project-shell-metric">
-            <span>Comments</span>
-            <strong>{comments.length}</strong>
-          </div>
-          <div className="project-shell-metric">
-            <span>Feed items</span>
-            <strong>{activityItems.length}</strong>
-          </div>
+      <section className="project-shell-metrics panel">
+        <div className="project-shell-metric">
+          <span className="project-shell-metric-label">Model types</span>
+          <strong>{elementTypes.length}</strong>
+        </div>
+        <div className="project-shell-metric">
+          <span className="project-shell-metric-label">Comments</span>
+          <strong>{comments.length}</strong>
+        </div>
+        <div className="project-shell-metric">
+          <span className="project-shell-metric-label">Activity</span>
+          <strong>{activityItems.length}</strong>
+        </div>
+        <div className="project-shell-metric">
+          <span className="project-shell-metric-label">Timeline</span>
+          <strong>{TIMELINE_PHASES[timelinePhaseIndex]?.name ?? "Idle"}</strong>
         </div>
       </section>
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept=".ifc,.ifczip,.wexbim,.obj,.fbx,.glb,.gltf"
+        onChange={handleUploadInputChange}
+        style={{ display: "none" }}
+      />
 
-      {/* Main Layout */}
-      <div className="project-layout">
-        {/* Left Sidebar */}
-        {showLeftSidebar && (
-          <div className="project-left-sidebar" style={{ width: leftDockWidth }}>
-            <div className="project-sidebar-controls">
-              <button
-                onClick={() => setShowLeftSidebar(false)}
-                className="project-sidebar-toggle-btn"
-                title={copy.layout.collapseSidebar}
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                className="project-sidebar-toggle-btn"
-                title="Resize dock"
-                onMouseDown={startDockResize("left")}
-              >
-                ⋮
-              </button>
-            </div>
-            <Sidebar
-              onFileSelected={handleFileSelected}
-              status={status}
-              loadedInfo={loadedInfo}
-              onFitCamera={handleFitCamera}
-              onResetCamera={handleResetCamera}
-              onClearModel={handleClearModel}
-              elementTypes={elementTypes}
-              onElementTypeClick={handleElementTypeClick}
-              loadTimeMs={loadTimeMs}
-              theme={theme}
-              onToggleTheme={handleToggleTheme}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              copy={copy.sidebar}
-              themeLabel={copy.themeLabel}
-              themeName={copy.themeNames[theme]}
-              onLocaleChange={handleToggleLocale}
-              localeLabel={copy.localeLabel}
-              localeName={copy.localeNames[locale]}
-            />
-          </div>
-        )}
-
-        {/* Main Viewer */}
+      <div className="project-layout project-layout-minimal">
         <div className="project-main">
-          {/* Toggle Left Sidebar Button */}
-          {!showLeftSidebar && (
-              <button
-                onClick={() => setShowLeftSidebar(true)}
-                className="project-open-left-btn"
-                title={copy.layout.openSidebar}
-              >
-                ☰
-              </button>
-          )}
-          {/* Toolbar */}
-          <div className="project-toolbar-row">
-            <FloatingToolPalette
-              collapsed={toolPaletteCollapsed}
-              onToggleCollapsed={() => setToolPaletteCollapsed((value) => !value)}
-              copy={workspaceCopy}
-              groups={[
-                {
-                  title: workspaceCopy.groupTitles.navigation,
-                  actions: [
-                    { id: "fit", label: workspaceCopy.minimapFit, icon: "eye", onClick: handleFitCamera },
-                    { id: "zoom-in", label: copy.toolbar.zoomIn, icon: "zoomIn", onClick: handleZoomIn },
-                    { id: "zoom-out", label: copy.toolbar.zoomOut, icon: "zoomOut", onClick: handleZoomOut },
-                  ],
-                },
-                {
-                  title: workspaceCopy.groupTitles.visibility,
-                  actions: [
-                    { id: "wire", label: copy.toolbar.wire, icon: "wireframe", active: wireframeActive, onClick: toggleWireframe },
-                    { id: "grid", label: copy.toolbar.grid, icon: "grid", active: gridActive, onClick: toggleGrid },
-                    { id: "xray", label: copy.toolbar.xray, icon: "xray", active: xrayActive, onClick: toggleXray },
-                  ],
-                },
-                {
-                  title: workspaceCopy.groupTitles.measurements,
-                  actions: [
-                    { id: "measure", label: copy.toolbar.measure, icon: "measure", active: measureActive, onClick: toggleMeasure },
-                    { id: "clip", label: copy.toolbar.clip, icon: "clip", active: clippingActive, onClick: toggleClipping },
-                    { id: "clear", label: copy.toolbar.clear, icon: "trash", onClick: handleClearMeasurements },
-                  ],
-                },
-                {
-                  title: workspaceCopy.groupTitles.actions,
-                  actions: [
-                    { id: "focus", label: copy.toolbar.focus, icon: "eye", onClick: handleFocusSelected },
-                    { id: "hide", label: copy.toolbar.hide, icon: "close", onClick: handleHideSelected },
-                    { id: "show-all", label: copy.toolbar.showAll, icon: "grid", onClick: handleShowAllElements },
-                    { id: "shot", label: copy.toolbar.screenshot, icon: "camera", onClick: handleScreenshot },
-                    { id: "keys", label: copy.toolbar.shortcuts, icon: "keyboard", onClick: () => setShowShortcuts(true) },
-                  ],
-                },
-              ]}
-            />
+          <div className="project-viewer-canvas">
+            <div ref={viewerCanvasHostRef} className="project-viewer-canvas-host panel">
+              <IFCViewer
+                ref={ifcViewerRef}
+                file={loadedFile}
+                onLoad={handleViewerLoad}
+                onError={handleViewerError}
+                onElementTypesReady={handleElementTypesReady}
+                onElementSelected={handleElementSelected}
+                theme={theme}
+                visualMode={heatmapMode}
+              />
+              <div className="project-canvas-overlays">
+                <ToolDock
+                  mode={uiState.mode}
+                  activeTool={uiState.activeTool}
+                  onModeChange={handleUiModeChange}
+                  onToolChange={handleUiToolChange}
+                  onMeasure={toggleMeasure}
+                  onIsolate={() => { ifcViewerRef.current?.clearTypeIsolation(); }}
+                  onHide={handleHideSelected}
+                />
+                <HUD
+                  enabled={uiState.hudEnabled}
+                  mode={uiState.mode}
+                  selectedName={selectedElement?.name ?? selectedElement?.type ?? null}
+                />
+              </div>
+              <ViewCube
+                onSetView={(direction) =>
+                  ifcViewerRef.current?.setViewAngle(direction)
+                }
+              />
+            </div>
           </div>
 
-          {/* Viewer + Right Panels */}
-          <div className={`project-viewer-row workspace-mode-${workspaceMode}`}>
-            {/* 3D Viewer */}
-            <div className="project-viewer-canvas">
-              <div ref={viewerCanvasHostRef} className="project-viewer-canvas-host">
-                <IFCViewer
-                  ref={ifcViewerRef}
-                  file={loadedFile}
-                  onLoad={handleViewerLoad}
-                  onError={handleViewerError}
-                  onElementTypesReady={handleElementTypesReady}
-                  onElementSelected={handleElementSelected}
-                  theme={theme}
-                  visualMode={heatmapMode}
-                />
-                <div className="project-canvas-overlays">
-                <MiniMapNavigator
-                  floors={WORKSPACE_FLOORS}
-                  activeFloor={activeFloor}
-                  onFloorChange={handleFloorChange}
-                  onFitView={handleFitCamera}
-                  copy={workspaceCopy}
-                  camera={cameraState}
-                />
-                </div>
-                <ViewCube
-                  onSetView={(direction) =>
-                    ifcViewerRef.current?.setViewAngle(direction)
-                  }
-                />
-              </div>
+          <div className="project-right-stack">
+            <MiniMapNavigator
+              floors={WORKSPACE_FLOORS}
+              activeFloor={activeFloor}
+              onFloorChange={handleFloorChange}
+              onFitView={handleFitCamera}
+              compact={uiState.navigatorCompact}
+              onToggleCompact={handleToggleNavigatorCompact}
+              copy={workspaceCopy}
+              camera={cameraState}
+            />
 
-              {/* Toggle Right Sidebar Button */}
-              {!showRightSidebar && (
-                  <button
-                    onClick={() => setShowRightSidebar(true)}
-                    className="project-open-right-btn"
-                    title={copy.layout.openPanel}
-                  >
-                    ☰
-                  </button>
-              )}
-            </div>
-
-            {/* Right Panels */}
-            {showRightSidebar && (
-              <div className="project-right-sidebar" style={{ width: rightDockWidth }}>
-                <div className="project-right-sidebar-header">
-                  <div className="project-right-tab-row">
-                    <button
-                      className={`tab-btn ${rightPanelTab === "properties" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("properties")}
-                      title={copy.layout.tabProperties}
-                    >
-                      {copy.layout.tabProperties}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "comments" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("comments")}
-                      title={copy.layout.tabComments}
-                    >
-                      {copy.layout.tabComments}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "documents" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("documents")}
-                      title={copy.layout.tabDocuments}
-                    >
-                      {copy.layout.tabDocuments}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "planning" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("planning")}
-                      title={copy.layout.tabPlanning}
-                    >
-                      {copy.layout.tabPlanning}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "costing" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("costing")}
-                      title={copy.layout.tabCosting}
-                    >
-                      {copy.layout.tabCosting}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "search" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("search")}
-                      title={workspaceCopy.searchTitle}
-                    >
-                      {workspaceCopy.searchTitle}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "heatmap" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("heatmap")}
-                      title={workspaceCopy.heatmapTitle}
-                    >
-                      {workspaceCopy.heatmapTitle}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "timeline" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("timeline")}
-                      title={workspaceCopy.timelineTitle}
-                    >
-                      {workspaceCopy.timelineTitle}
-                    </button>
-                    <button
-                      className={`tab-btn ${rightPanelTab === "feed" ? "active" : ""}`}
-                      onClick={() => setRightPanelTab("feed")}
-                      title={workspaceCopy.activityTitle}
-                    >
-                      {workspaceCopy.activityTitle}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setShowRightSidebar(false)}
-                    className="project-sidebar-toggle-btn"
-                    title={copy.layout.collapsePanel}
-                  >
-                    ›
-                  </button>
-                  <button
-                    type="button"
-                    className="project-sidebar-toggle-btn"
-                    title="Resize dock"
-                    onMouseDown={startDockResize("right")}
-                  >
-                    ⋮
-                  </button>
-                </div>
-
-                <div className={`project-right-content workspace-right-${workspaceMode}`}>
-                  {workspaceMode !== "single" && (
-                    <div className="workspace-aux-panel">
-                      {workspaceMode === "split" ? (
-                        <WorkspaceActivityFeed items={activityItems} copy={workspaceCopy} />
-                      ) : workspaceMode === "compare" ? (
-                        <HeatmapLegend mode={heatmapMode} onModeChange={setHeatmapMode} copy={workspaceCopy} />
-                      ) : (
-                        <WorkspacePresence users={presenceUsers} copy={workspaceCopy} />
-                      )}
-                    </div>
-                  )}
-                  <div className="workspace-main-panel">
-                    {rightPanelTab === "properties" ? (
-                      selectedElement ? (
-                        <PropertiesPanel
-                          data={selectedElement}
-                          onClose={() => setSelectedElement(null)}
-                        />
-                      ) : (
-                        <div className="project-empty-properties">
-                          {copy.layout.selectElement}
-                        </div>
-                      )
-                    ) : rightPanelTab === "comments" ? (
-                      <ElementComments
-                        selectedExpressId={
-                          selectedElement && selectedElement.expressId > 0
-                            ? selectedElement.expressId
-                            : null
-                        }
-                        selectedElementType={selectedElement?.type ?? null}
-                        comments={comments}
-                        onAddComment={handleAddComment}
-                        userName={user?.name ?? "Guest"}
-                        userRole={userRole}
-                      />
-                    ) : rightPanelTab === "documents" ? (
-                      projectId ? (
-                        <DocumentBrowser
-                          projectId={projectId}
-                          onSelectDocument={handleFileSelected}
-                          copy={copy.documents}
-                        />
-                      ) : (
-                        <div className="project-empty-properties">
-                          {copy.layout.projectUnavailable}
-                        </div>
-                      )
-                    ) : rightPanelTab === "planning" ? (
-                      projectId ? (
-                        <Planning4DPanel
-                          projectId={projectId}
-                          selectedElement={selectedElement}
-                          copy={copy.planning}
-                          onStepChange={handlePlanningStep}
-                          getViewerCanvas={() =>
-                            viewerCanvasHostRef.current?.querySelector("canvas") ?? null
-                          }
-                        />
-                      ) : (
-                        <div className="project-empty-properties">
-                          {copy.layout.projectUnavailable}
-                        </div>
-                      )
-                    ) : rightPanelTab === "costing" ? (
-                      projectId ? (
-                        <Cost5DPanel
-                          projectId={projectId}
-                          selectedElement={selectedElement}
-                          copy={copy.costing}
-                          getQuantitySummary={handleGetQuantitySummary}
-                          getElementQuantity={handleGetElementQuantity}
-                          setElementProgress={handleSetElementProgress}
-                        />
-                      ) : (
-                        <div className="project-empty-properties">
-                          {copy.layout.projectUnavailable}
-                        </div>
-                      )
-                    ) : rightPanelTab === "search" ? (
-                      <BimSearchPanel
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        results={searchResults}
-                        chips={searchChips}
-                        onChipClick={setSearchQuery}
-                        copy={workspaceCopy}
-                        onResultClick={(id) => {
-                          handleElementTypeClick(id);
-                          setRightPanelTab("properties");
-                        }}
-                      />
-                    ) : rightPanelTab === "heatmap" ? (
-                      <HeatmapLegend mode={heatmapMode} onModeChange={setHeatmapMode} copy={workspaceCopy} />
-                    ) : rightPanelTab === "timeline" ? (
-                      <WorkspaceTimeline
-                        phases={TIMELINE_PHASES.map((phase) => ({
-                          id: phase.id,
-                          label: phase.name,
-                          description: phase.source,
-                        }))}
-                        currentPhaseIndex={timelinePhaseIndex}
-                        progress={timelineProgress}
-                        speed={timelineSpeed}
-                        playing={timelinePlaying}
-                        onTogglePlay={() => setTimelinePlaying((value) => !value)}
-                        onProgressChange={setTimelineProgress}
-                        onSpeedChange={setTimelineSpeed}
-                        copy={workspaceCopy}
-                      />
-                    ) : (
-                      <WorkspaceActivityFeed items={activityItems} copy={workspaceCopy} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            <ContextInspector
+              mode={uiState.mode}
+              selection={selectedElement}
+              projectId={projectId}
+              comments={comments}
+              activityItems={activityItems}
+              searchQuery={searchQuery}
+              searchResults={searchResults}
+              searchChips={searchChips}
+              heatmapMode={heatmapMode}
+              timeline={{
+                phases: TIMELINE_PHASES,
+                currentPhaseIndex: timelinePhaseIndex,
+                progress: timelineProgress,
+                speed: timelineSpeed,
+                playing: timelinePlaying,
+              }}
+              copy={copy}
+              onSearchChange={setSearchQuery}
+              onChipClick={setSearchQuery}
+              onResultClick={(id) => {
+                handleElementTypeClick(id);
+                setUiState((current) => ({ ...current, mode: "SELECT", activePanel: "CONTEXT" }));
+              }}
+              onModeChange={handleUiModeChange}
+              onHeatmapModeChange={setHeatmapMode}
+              onTimelineProgressChange={setTimelineProgress}
+              onTimelineSpeedChange={setTimelineSpeed}
+              onTimelineTogglePlay={() => setTimelinePlaying((value) => !value)}
+              getViewerCanvas={() => viewerCanvasHostRef.current?.querySelector("canvas") ?? null}
+              onSelectDocument={handleFileSelected}
+              onUploadClick={handleUploadClick}
+              userName={user?.name ?? "Guest"}
+              userRole={userRole}
+              onAddComment={handleAddComment}
+              onStepChange={handlePlanningStep}
+              getQuantitySummary={handleGetQuantitySummary}
+              getElementQuantity={handleGetElementQuantity}
+              setElementProgress={handleSetElementProgress}
+            />
           </div>
         </div>
       </div>

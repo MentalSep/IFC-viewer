@@ -102,7 +102,7 @@ export default function DocumentBrowser({
   };
 
   return (
-    <div className="document-browser">
+    <div className="panel document-browser">
       <div className="browser-header">
         <h3>{copy.title}</h3>
         <label className="upload-btn">

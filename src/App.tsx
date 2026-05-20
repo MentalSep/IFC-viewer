@@ -55,10 +55,14 @@ function AppRoutes() {
   );
 }
 
+import ErrorBoundary from "./components/ErrorBoundary";
+
 function App() {
   return (
     <AppLanguageProvider>
-      <AppRoutes />
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
     </AppLanguageProvider>
   );
 }
