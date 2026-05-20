@@ -14,6 +14,7 @@ interface MiniMapNavigatorProps {
   onFloorChange: (floorId: string) => void;
   onFitView: () => void;
   copy: ViewerCopy["workspace"];
+  camera?: { position: { x: number; y: number; z: number }; target?: { x: number; y: number; z: number } } | null;
 }
 
 export function MiniMapNavigator({
@@ -22,11 +23,26 @@ export function MiniMapNavigator({
   onFloorChange,
   onFitView,
   copy,
+  camera = null,
 }: MiniMapNavigatorProps) {
   const activeIndex = Math.max(
     0,
     floors.findIndex((floor) => floor.id === activeFloor),
   );
+
+  // Map world camera X/Z to minimap percentage coordinates (simple heuristic)
+  const mapCameraToPercent = () => {
+    if (!camera) return { left: 40, top: 28 };
+    const x = camera.position.x;
+    const z = camera.position.z;
+    // normalize - clamp to reasonable values
+    const lx = Math.max(-50, Math.min(50, x));
+    const lz = Math.max(-50, Math.min(50, z));
+    const left = 50 + (lx / 100) * 60; // map to 20-80%
+    const top = 50 - (lz / 100) * 60;
+    return { left: Math.max(8, Math.min(88, left)), top: Math.max(8, Math.min(88, top)) };
+  };
+  const camPct = mapCameraToPercent();
 
   return (
     <motion.div
@@ -56,8 +72,9 @@ export function MiniMapNavigator({
           ))}
         </div>
         <motion.div
-          animate={{ top: `${18 + activeIndex * 16}%`, left: `${28 + activeIndex * 10}%` }}
-          className="absolute h-4 w-4 rounded-full border border-white/50 bg-cyan-300 shadow-[0_0_0_8px_rgba(34,211,238,0.12)]"
+          animate={{ top: `${camPct.top}%`, left: `${camPct.left}%` }}
+          transition={{ type: "spring", stiffness: 140, damping: 18 }}
+          className="absolute h-4 w-4 rounded-full border border-white/50 bg-cyan-300 shadow-[0_0_0_10px_rgba(34,211,238,0.14)]"
         />
       </div>
 

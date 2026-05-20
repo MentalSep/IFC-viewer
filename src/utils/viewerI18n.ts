@@ -1,7 +1,26 @@
 export type ViewerLocale = "en" | "fr" | "de" | "es" | "it" | "ar";
-export type ViewerTheme = "dark" | "light" | "aurora" | "midnight" | "forest";
+export type ViewerTheme =
+  | "dark"
+  | "light"
+  | "aurora"
+  | "midnight"
+  | "forest"
+  | "dark-bim"
+  | "blueprint"
+  | "construction-orange"
+  | "technical-neon";
 
-export const VIEWER_THEMES: ViewerTheme[] = ["dark", "light", "aurora", "midnight", "forest"];
+export const VIEWER_THEMES: ViewerTheme[] = [
+  "dark",
+  "light",
+  "aurora",
+  "midnight",
+  "forest",
+  "dark-bim",
+  "blueprint",
+  "construction-orange",
+  "technical-neon",
+];
 
 export interface ViewerCopy {
   localeLabel: string;
@@ -215,7 +234,7 @@ const EN: ViewerCopy = {
   localeLabel: "Language",
   localeNames: { en: "English", fr: "French", de: "German", es: "Spanish", it: "Italian", ar: "Arabic" },
   themeLabel: "Theme",
-  themeNames: { dark: "Dark", light: "Light", aurora: "Aurora", midnight: "Midnight", forest: "Forest" },
+  themeNames: { dark: "Dark", light: "Light", aurora: "Aurora", midnight: "Midnight", forest: "Forest", "dark-bim": "Dark BIM", "blueprint": "Blueprint", "construction-orange": "Construction Orange", "technical-neon": "Technical Neon" },
   workspace: {
     commandPaletteTitle: "Command palette",
     commandPaletteSubtitle: "Smart BIM tools",
@@ -430,7 +449,7 @@ const FR: ViewerCopy = {
   localeLabel: "Langue",
   localeNames: { en: "Anglais", fr: "Français", de: "Allemand", es: "Espagnol", it: "Italien", ar: "Arabe" },
   themeLabel: "Thème",
-    themeNames: { dark: "Sombre", light: "Clair", aurora: "Aurore", midnight: "Minuit", forest: "Forêt" },
+    themeNames: { dark: "Sombre", light: "Clair", aurora: "Aurore", midnight: "Minuit", forest: "Forêt", "dark-bim": "Dark BIM", "blueprint": "Blueprint", "construction-orange": "Construction Orange", "technical-neon": "Technical Neon" },
   workspace: {
     ...EN.workspace,
     commandPaletteTitle: "Palette de commandes",
@@ -648,7 +667,7 @@ const DE: ViewerCopy = {
   localeLabel: "Sprache",
   localeNames: { en: "Englisch", fr: "Französisch", de: "Deutsch", es: "Spanisch", it: "Italienisch", ar: "Arabisch" },
   themeLabel: "Design",
-    themeNames: { dark: "Dunkel", light: "Hell", aurora: "Aurora", midnight: "Mitternacht", forest: "Wald" },
+    themeNames: { dark: "Dunkel", light: "Hell", aurora: "Aurora", midnight: "Mitternacht", forest: "Wald", "dark-bim": "Dark BIM", "blueprint": "Blueprint", "construction-orange": "Construction Orange", "technical-neon": "Technical Neon" },
   workspace: {
     ...EN.workspace,
     commandPaletteTitle: "Befehlsleiste",
@@ -790,7 +809,7 @@ const AR: ViewerCopy = {
   localeLabel: "اللغة",
   localeNames: { en: "الإنجليزية", fr: "الفرنسية", de: "الألمانية", es: "الإسبانية", it: "الإيطالية", ar: "العربية" },
   themeLabel: "السمة",
-    themeNames: { dark: "داكن", light: "فاتح", aurora: "أورورا", midnight: "منتصف الليل", forest: "غابة" },
+    themeNames: { dark: "داكن", light: "فاتح", aurora: "أورورا", midnight: "منتصف الليل", forest: "غابة", "dark-bim": "Dark BIM", "blueprint": "Blueprint", "construction-orange": "Construction Orange", "technical-neon": "Technical Neon" },
   workspace: {
     ...EN.workspace,
     commandPaletteTitle: "لوحة الأوامر",
@@ -932,7 +951,7 @@ const ES: ViewerCopy = {
   localeLabel: "Idioma",
   localeNames: { en: "Inglés", fr: "Francés", de: "Alemán", es: "Español", it: "Italiano", ar: "Árabe" },
   themeLabel: "Tema",
-  themeNames: { dark: "Oscuro", light: "Claro", aurora: "Aurora", midnight: "Medianoche", forest: "Bosque" },
+  themeNames: { dark: "Oscuro", light: "Claro", aurora: "Aurora", midnight: "Medianoche", forest: "Bosque", "dark-bim": "Dark BIM", "blueprint": "Blueprint", "construction-orange": "Construction Orange", "technical-neon": "Technical Neon" },
   shell: {
     title: "Visor de proyecto",
     subtitle: "Modelo 3D, documentos, comentarios y chat en un solo espacio de trabajo.",
@@ -1097,7 +1116,7 @@ const IT: ViewerCopy = {
   localeLabel: "Lingua",
   localeNames: { en: "Inglese", fr: "Francese", de: "Tedesco", es: "Spagnolo", it: "Italiano", ar: "Arabo" },
   themeLabel: "Tema",
-  themeNames: { dark: "Scuro", light: "Chiaro", aurora: "Aurora", midnight: "Mezzanotte", forest: "Foresta" },
+  themeNames: { dark: "Scuro", light: "Chiaro", aurora: "Aurora", midnight: "Mezzanotte", forest: "Foresta", "dark-bim": "Dark BIM", "blueprint": "Blueprint", "construction-orange": "Construction Orange", "technical-neon": "Technical Neon" },
   shell: {
     title: "Visualizzatore progetto",
     subtitle: "Modello 3D, documenti, commenti e chat in un unico spazio di lavoro.",

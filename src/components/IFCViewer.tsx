@@ -264,6 +264,13 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
     const ifcApiRef = useRef<WebIFC.IfcAPI | null>(null);
     const modelRef = useRef<THREE.Group | null>(null);
     const animationIdRef = useRef<number | null>(null);
+    const cameraTransitionRef = useRef<{
+      from: THREE.Vector3;
+      to: THREE.Vector3;
+      targetFrom: THREE.Vector3;
+      targetTo: THREE.Vector3;
+      progress: number;
+    } | null>(null);
     const gridRef = useRef<THREE.GridHelper | null>(null);
     const [isReady, setIsReady] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -413,6 +420,21 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       const animate = () => {
         animationIdRef.current = requestAnimationFrame(animate);
         controls.update();
+
+        // Smooth camera transitions (if requested)
+        try {
+          const cam = cameraRef.current;
+          const ctr = controlsRef.current;
+          const trans = cameraTransitionRef.current;
+          if (cam && ctr && trans) {
+            trans.progress = Math.min(1, trans.progress + 0.06);
+            cam.position.lerpVectors(trans.from, trans.to, trans.progress);
+            ctr.target.lerpVectors(trans.targetFrom, trans.targetTo, trans.progress);
+            if (trans.progress >= 1) cameraTransitionRef.current = null;
+          }
+        } catch (e) {
+          // Ignore interpolation errors
+        }
 
         // Always render to show damped camera movement smoothly
         renderer.render(scene, camera);
@@ -1148,9 +1170,23 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
           break;
       }
 
-      camera.position.copy(pos);
-      controls.target.copy(target);
-      controls.update();
+      // Smooth transition to new camera pose
+      const cam = cameraRef.current;
+      const ctr = controlsRef.current;
+      if (cam && ctr) {
+        cameraTransitionRef.current = {
+          from: cam.position.clone(),
+          to: pos.clone(),
+          targetFrom: ctr.target.clone(),
+          targetTo: target.clone(),
+          progress: 0,
+        };
+      } else {
+        camera.position.copy(pos);
+        controls.target.copy(target);
+        controls.update();
+      }
+
       needsRenderRef.current = true;
     }, []);
 
@@ -1387,6 +1423,15 @@ const IFCViewer = forwardRef<IFCViewerRef, IFCViewerProps>(
       getQuantitySummary,
       getElementQuantity,
       getLoadedFileName: () => loadedFileNameRef.current,
+      getCameraState: () => {
+        const cam = cameraRef.current;
+        const ctr = controlsRef.current;
+        if (!cam || !ctr) return null;
+        return {
+          position: { x: cam.position.x, y: cam.position.y, z: cam.position.z },
+          target: { x: ctr.target.x, y: ctr.target.y, z: ctr.target.z },
+        };
+      },
       resize: resizeRenderer,
     }));
 

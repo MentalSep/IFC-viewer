@@ -31,9 +31,13 @@ export function FloatingToolPalette({
   return (
     <motion.div
       layout
+      drag
+      dragMomentum={false}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
+      whileDrag={{ scale: 1.01, opacity: 0.98 }}
       className="pointer-events-auto rounded-3xl border border-white/10 bg-slate-950/75 p-3 shadow-glow backdrop-blur-xl"
+      aria-label="Tool palette"
     >
       <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
         <div>

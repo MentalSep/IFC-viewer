@@ -169,6 +169,19 @@ export function ProjectViewer() {
   const [userRole, setUserRole] = useState<ProfessionalRole>("Architect");
   const loadStatusTimerRef = useRef<number | null>(null);
   const viewerCanvasHostRef = useRef<HTMLDivElement | null>(null);
+  const [cameraState, setCameraState] = useState<null | { position: { x:number;y:number;z:number }; target?: { x:number;y:number;z:number } }>(null);
+  useEffect(() => {
+    let mounted = true;
+    const poll = () => {
+      try {
+        const state = ifcViewerRef.current?.getCameraState?.();
+        if (mounted && state) setCameraState(state);
+      } catch {}
+      if (mounted) requestAnimationFrame(poll);
+    };
+    poll();
+    return () => { mounted = false; };
+  }, []);
   const copy = useMemo(() => getViewerCopy(locale), [locale]);
   const workspaceCopy = copy.workspace;
 
@@ -881,6 +894,7 @@ export function ProjectViewer() {
                   onFloorChange={handleFloorChange}
                   onFitView={handleFitCamera}
                   copy={workspaceCopy}
+                  camera={cameraState}
                 />
                 </div>
                 <ViewCube
