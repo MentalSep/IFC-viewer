@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../services/state/useAuthStore";
+import { useProjectsStore } from "../services/state/useProjectsStore";
 import { Navbar } from "../components/Navbar";
 import { AppFooter } from "../components/AppFooter";
 import IFCViewer, { type IFCViewerRef } from "../components/IFCViewer";
@@ -77,6 +78,7 @@ type WorkspaceMode = "single" | "split" | "compare" | "multi";
 export function ProjectViewer() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuthStore();
+  const { currentProject, loadProject } = useProjectsStore();
   const { locale, cycleLocale, copy: appCopy } = useAppLanguage();
   const ifcViewerRef = useRef<IFCViewerRef>(null);
 
@@ -174,6 +176,7 @@ export function ProjectViewer() {
     selection: null,
   });
   const selectedElement = uiState.selection;
+  const openProject = currentProject?.id === projectId ? currentProject : null;
   const loadStatusTimerRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const viewerCanvasHostRef = useRef<HTMLDivElement | null>(null);
@@ -191,6 +194,7 @@ export function ProjectViewer() {
     return () => { mounted = false; };
   }, []);
   const copy = useMemo(() => getViewerCopy(locale), [locale]);
+  const projectDisplayName = openProject?.name ?? (projectId ? `Project ${projectId.slice(0, 8)}...` : copy.shell.title);
   const workspaceCopy = copy.workspace;
 
   // Blank canvas - user uploads file
@@ -396,6 +400,7 @@ export function ProjectViewer() {
   useEffect(() => {
     if (!projectId) return;
     localStorage.setItem(LAST_PROJECT_KEY, projectId);
+    void loadProject(projectId);
 
     const stored = localStorage.getItem(`${PROJECT_SESSION_PREFIX}${projectId}`);
     if (!stored) return;
@@ -450,7 +455,7 @@ export function ProjectViewer() {
     } catch {
       localStorage.removeItem(`${PROJECT_SESSION_PREFIX}${projectId}`);
     }
-  }, [projectId]);
+  }, [loadProject, projectId]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -737,14 +742,14 @@ export function ProjectViewer() {
     <div className="project-viewer-page" data-theme={theme} data-locale={locale}>
       <Navbar
         variant="project"
-        projectTitle={`Project ${projectId?.slice(0, 8)}...`}
+        projectTitle={projectDisplayName}
       />
 
       <section className="project-shell-header">
         <div className="project-shell-copy">
           <p className="project-shell-kicker">{copy.shell.title}</p>
-          <h1>{loadedInfo?.name ?? "Enterprise BIM workspace"}</h1>
-          <p className="project-shell-subtitle">{copy.shell.subtitle}</p>
+          <h1>{loadedInfo?.name ?? projectDisplayName}</h1>
+          <p className="project-shell-subtitle">{openProject?.description || copy.shell.subtitle}</p>
         </div>
         <div className="project-shell-actions">
           <button type="button" className="project-shell-chip" onClick={handleUploadClick}>

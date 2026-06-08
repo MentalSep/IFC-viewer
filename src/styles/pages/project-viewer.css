@@ -2,12 +2,13 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow-x: hidden;
 }
 
 .project-shell-header {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, auto);
+  align-items: start;
   justify-content: space-between;
   gap: var(--space-3);
   margin: 14px clamp(16px, 2.2vw, 28px) 0;
@@ -17,6 +18,10 @@
   background: color-mix(in srgb, var(--panel) 82%, transparent);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 48px rgba(2, 8, 23, 0.14);
+}
+
+.project-shell-copy {
+  min-width: 0;
 }
 
 .project-shell-copy h1 {
@@ -88,7 +93,8 @@
 .project-shell-copy h1 {
   margin: 0;
   font-size: clamp(22px, 2.6vw, 34px);
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .project-shell-subtitle {
@@ -107,10 +113,11 @@
 }
 
 .project-shell-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, max-content));
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  justify-content: end;
   max-width: 100%;
 }
 
@@ -166,6 +173,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 38px;
   padding: 9px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -173,6 +181,7 @@
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .project-shell-chip {
@@ -235,11 +244,12 @@
 .project-main {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
   gap: 12px;
   position: relative;
   min-width: 0;
   min-height: 0;
+  align-items: stretch;
 }
 
 .project-right-stack {
@@ -303,7 +313,7 @@
 .project-viewer-canvas {
   min-width: 0;
   position: relative;
-  min-height: 0;
+  min-height: clamp(520px, calc(100vh - 300px), 860px);
   display: flex;
   flex-direction: column;
 }
@@ -312,7 +322,8 @@
   position: relative;
   flex: 1;
   width: 100%;
-  min-height: 0;
+  min-height: 100%;
+  overflow: hidden;
 }
 
 .project-canvas-overlays {
@@ -364,7 +375,7 @@
 
 .project-right-stack .context-inspector {
   width: 100% !important;
-  max-height: none;
+  max-height: clamp(520px, calc(100vh - 300px), 860px);
 }
 
 .project-right-stack .minimap-navigator,
@@ -383,7 +394,7 @@
 }
 
 .project-shell-metrics {
-  margin: 8px 0 12px 0;
+  margin: 8px clamp(16px, 2.2vw, 28px) 0;
   padding: 10px 12px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -536,6 +547,23 @@
 
 /* Small responsive tweaks */
 @media (max-width: 980px) {
+  .project-shell-header {
+    grid-template-columns: 1fr;
+  }
+
+  .project-shell-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .project-shell-chip,
+  .project-shell-status {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+
   .project-main {
     grid-template-columns: 1fr;
   }
@@ -543,6 +571,14 @@
   .context-inspector {
     grid-column: auto;
     max-height: none;
+  }
+
+  .project-right-stack .context-inspector {
+    max-height: none;
+  }
+
+  .project-viewer-canvas {
+    min-height: min(70vh, 640px);
   }
 
   .project-bottom-panel {
@@ -1251,6 +1287,7 @@
   }
 
   .project-shell-actions {
+    grid-template-columns: 1fr;
     width: 100%;
   }
 
